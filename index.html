@@ -4,1088 +4,355 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SALA — Monitor Global de Conflictos</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans+Condensed:wght@300;400;600;700&family=IBM+Plex+Sans:wght@300;400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@400;600;700&family=IBM+Plex+Sans:wght@400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
-/* ═══════════════════════════════════════════
-   BASE
-═══════════════════════════════════════════ */
-:root {
-  --bg: #07090d;
-  --surface: #0c0f16;
-  --surface2: #111620;
-  --surface3: #161d2a;
-  --border: #1a2535;
-  --border2: #243448;
-  --acc: #00d4ff;
-  --acc2: #0099cc;
-  --red: #f0334a;
-  --ora: #f07330;
-  --yel: #f0c330;
-  --grn: #30f090;
-  --pur: #9b5de5;
-  --t1: #dce8f5;
-  --t2: #6b8aaa;
-  --t3: #334455;
-  --t4: #1e2d40;
-  --mono: 'IBM Plex Mono', monospace;
-  --cond: 'IBM Plex Sans Condensed', sans-serif;
-  --sans: 'IBM Plex Sans', sans-serif;
+:root{
+  --bg:#07090d;--s1:#0b0e14;--s2:#0f1319;
+  --b1:#18222f;--b2:#1e2d40;--b3:#263650;
+  --acc:#00d4ff;--red:#e5334a;--ora:#e07030;--yel:#d4b830;--grn:#2ec87a;--pur:#7c55d4;
+  --t1:#ccd8e8;--t2:#5a7a9a;--t3:#283848;
+  --mono:'IBM Plex Mono',monospace;
+  --cond:'IBM Plex Sans Condensed',sans-serif;
+  --sans:'IBM Plex Sans',sans-serif;
 }
-*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--t1); font-family:var(--sans); font-size:13px; }
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+a{text-decoration:none;color:inherit;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px;overflow-x:hidden;}
+::-webkit-scrollbar{width:3px;height:3px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--b3);border-radius:2px;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes ring{0%{transform:scale(1);opacity:.3}100%{transform:scale(3.5);opacity:0}}
+@keyframes mpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(1.15)}}
+@keyframes ticker{0%{transform:translateX(100vw)}100%{transform:translateX(-100%)}}
 
-/* Scanline overlay */
-body::after {
-  content:''; position:fixed; inset:0; pointer-events:none; z-index:9999;
-  background: repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0,212,255,0.008) 2px, rgba(0,212,255,0.008) 3px);
+/* === TOPBAR === */
+#topbar{position:sticky;top:0;z-index:900;height:40px;background:var(--s1);border-bottom:1px solid var(--b2);display:flex;align-items:center;padding:0 12px;gap:10px;}
+#logo{font-family:var(--mono);font-weight:600;font-size:19px;letter-spacing:5px;color:var(--acc);text-shadow:0 0 18px rgba(0,212,255,.5);}
+#logo-sub{font-family:var(--mono);font-size:9px;color:var(--t3);letter-spacing:2px;}
+.vsep{width:1px;height:20px;background:var(--b2);}
+.spill{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;}
+.dot{width:6px;height:6px;border-radius:50%;animation:blink 2s ease-in-out infinite;}
+.dot.r{background:var(--red);box-shadow:0 0 6px var(--red);}
+.dot.g{background:var(--grn);box-shadow:0 0 6px var(--grn);}
+#defcon{font-family:var(--mono);font-size:10px;font-weight:600;background:var(--red);color:#fff;padding:2px 9px;border-radius:2px;letter-spacing:1px;}
+#top-right{margin-left:auto;display:flex;align-items:center;}
+.tkpi{display:flex;flex-direction:column;align-items:flex-end;padding:0 10px;border-left:1px solid var(--b1);}
+.tkv{font-family:var(--mono);font-size:13px;font-weight:600;line-height:1.15;}
+.tkl{font-family:var(--cond);font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);}
+#clock{font-family:var(--mono);font-size:14px;color:var(--acc);padding:0 10px;border-left:1px solid var(--b1);white-space:nowrap;}
+#bylink{font-family:var(--mono);font-size:9px;color:var(--t3);border:1px solid var(--b2);padding:2px 8px;border-radius:2px;margin-left:8px;transition:all .2s;}
+#bylink:hover{color:var(--acc);border-color:var(--acc);}
+
+/* === MAP — sticky, top half === */
+#map-area{
+  position:sticky;top:40px;z-index:800;
+  height:calc(50vh - 20px);min-height:260px;
+  display:flex;border-bottom:2px solid var(--b3);
 }
+/* layers */
+#layers-sb{width:188px;flex-shrink:0;background:rgba(7,9,13,.97);border-right:1px solid var(--b2);display:flex;flex-direction:column;overflow-y:auto;}
+.ly-title{padding:6px 10px;font-family:var(--cond);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t3);border-bottom:1px solid var(--b2);}
+.ly-row{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--b1);cursor:pointer;transition:background .12s;}
+.ly-row:hover{background:rgba(255,255,255,.04);}
+.ly-cb{width:15px;height:15px;border:1px solid var(--b3);border-radius:2px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.ly-cb.on{background:var(--acc);border-color:var(--acc);}
+.ly-cb.on::after{content:"✓";font-size:9px;font-weight:700;color:#000;}
+.ly-ico{font-size:12px;width:14px;text-align:center;flex-shrink:0;}
+.ly-lbl{font-family:var(--cond);font-size:11px;font-weight:600;flex:1;}
+/* map wrap */
+#map-wrap{flex:1;position:relative;}
+#map{width:100%;height:100%;}
+.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.65) saturate(.5) contrast(1.1);}
+.leaflet-control-attribution{display:none;}
+.leaflet-control-zoom a{background:rgba(11,14,20,.9)!important;color:var(--acc)!important;border-color:var(--b2)!important;}
+.leaflet-popup-content-wrapper{background:rgba(11,14,20,.97)!important;border:1px solid var(--b2)!important;border-radius:3px!important;color:var(--t1)!important;box-shadow:0 8px 40px rgba(0,0,0,.95)!important;}
+.leaflet-popup-tip{background:rgba(11,14,20,.97)!important;}
+.leaflet-popup-content{margin:10px 12px!important;min-width:240px;font-family:var(--sans)!important;font-size:12px;}
+.leaflet-popup-close-button{color:var(--t2)!important;}
+.pu-t{font-family:var(--cond);font-size:15px;font-weight:700;margin-bottom:2px;}
+.pu-b{display:inline-block;font-family:var(--mono);font-size:8px;letter-spacing:2px;padding:1px 6px;border-radius:1px;margin-bottom:5px;}
+.pu-d{font-size:11px;color:var(--t2);line-height:1.5;margin-bottom:6px;}
+.pu-lbl{font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:4px;}
+.pu-chips{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:5px;}
+.pu-chip{font-family:var(--cond);font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px;border:1px solid;transition:filter .15s;}
+.pu-chip:hover{filter:brightness(1.5);}
+.pu-xl{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:9px;color:#1d9bf0;border:1px solid #1d9bf040;background:#1d9bf010;}
+.pu-xl:hover{background:#1d9bf025;}
+/* map overlays */
+#time-filter{position:absolute;top:8px;left:8px;z-index:500;display:flex;gap:3px;}
+.tf{font-family:var(--mono);font-size:9px;padding:3px 7px;border-radius:2px;border:1px solid var(--b2);color:var(--t3);background:rgba(7,9,13,.88);backdrop-filter:blur(4px);transition:all .15s;}
+.tf.on{color:#000;background:var(--grn);border-color:var(--grn);}
+#region-bar{position:absolute;bottom:8px;left:8px;z-index:500;display:flex;gap:4px;}
+.rb{font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:2px;background:rgba(7,9,13,.88);border:1px solid var(--b2);color:var(--t2);backdrop-filter:blur(4px);transition:all .15s;}
+.rb:hover{color:var(--acc);border-color:var(--acc);}
+#map-legend{position:absolute;bottom:8px;right:8px;z-index:500;background:rgba(7,9,13,.88);border:1px solid var(--b2);border-radius:2px;padding:4px 8px;display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:8px;color:var(--t2);backdrop-filter:blur(4px);}
+.leg-i{display:flex;align-items:center;gap:3px;}
+.leg-d{width:7px;height:7px;border-radius:50%;}
 
-/* ═══════════════════════════════════════════
-   LAYOUT SKELETON
-═══════════════════════════════════════════ */
-#app { display:flex; flex-direction:column; height:100vh; }
-#topbar { flex-shrink:0; }
-#body { display:flex; flex:1; min-height:0; }
-#left-panel { width:320px; flex-shrink:0; display:flex; flex-direction:column; min-height:0; border-right:1px solid var(--border); background:var(--surface); }
-#map-area { flex:1; position:relative; }
-#right-panel { width:340px; flex-shrink:0; display:flex; flex-direction:column; min-height:0; border-left:1px solid var(--border); background:var(--surface); }
-#ticker-bar { flex-shrink:0; }
-
-/* ═══════════════════════════════════════════
-   TOPBAR
-═══════════════════════════════════════════ */
-#topbar {
-  height:46px; background:var(--surface); border-bottom:1px solid var(--border2);
-  display:flex; align-items:center; padding:0 14px; gap:0;
+/* === PANELS — sticky below map, bottom half === */
+#panels{
+  position:sticky;top:calc(50vh + 20px);z-index:700;
+  height:calc(50vh - 60px);min-height:220px;
+  display:flex;border-bottom:2px solid var(--b3);
 }
-#logo-area { display:flex; align-items:baseline; gap:10px; margin-right:18px; }
-#logo { font-family:var(--mono); font-weight:600; font-size:20px; letter-spacing:6px; color:var(--acc); text-shadow:0 0 20px rgba(0,212,255,.5); }
-#logo-sub { font-family:var(--mono); font-size:9px; font-weight:300; color:var(--t3); letter-spacing:2px; text-transform:uppercase; }
+.ph{flex-shrink:0;height:32px;padding:0 10px;background:var(--s2);border-bottom:1px solid var(--b2);display:flex;align-items:center;gap:8px;}
+.ph-t{font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;}
+.live-badge{font-family:var(--mono);font-size:7px;font-weight:600;background:var(--red);color:#fff;padding:1px 5px;border-radius:2px;animation:blink 1.8s infinite;}
 
-.top-sep { width:1px; height:22px; background:var(--border2); margin:0 14px; }
+/* TV panel */
+#tv-panel{width:310px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--b2);}
+#tv-tabs{flex-shrink:0;display:flex;flex-wrap:wrap;gap:3px;padding:5px 7px;border-bottom:1px solid var(--b2);background:var(--s2);}
+.tv-tab{font-family:var(--cond);font-size:10px;font-weight:700;letter-spacing:.5px;padding:2px 8px;border-radius:2px;border:1px solid var(--b2);color:var(--t3);background:transparent;transition:all .15s;text-transform:uppercase;}
+.tv-tab.on{background:var(--red);color:#fff;border-color:var(--red);}
+#tv-frame{flex:1;position:relative;background:#000;overflow:hidden;}
+#tv-iframe{width:100%;height:100%;border:none;display:block;}
+.tv-ov{position:absolute;top:6px;left:6px;background:var(--red);color:#fff;font-family:var(--cond);font-size:8px;font-weight:900;letter-spacing:2px;padding:2px 5px;border-radius:1px;animation:blink 1.5s infinite;pointer-events:none;z-index:5;}
+#tv-link{position:absolute;bottom:6px;right:6px;font-family:var(--mono);font-size:9px;color:var(--acc);background:rgba(7,9,13,.88);padding:3px 8px;border-radius:2px;border:1px solid var(--b2);}
+#tv-link:hover{border-color:var(--acc);}
+#tv-err{display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;width:100%;height:100%;}
+#tv-err.show{display:flex;}
+.tv-err-btn{font-family:var(--cond);font-size:11px;font-weight:700;color:var(--red);border:1px solid var(--red);padding:6px 14px;border-radius:2px;}
+.tv-err-btn:hover{background:var(--red);color:#000;}
 
-.status-pill { display:flex; align-items:center; gap:5px; font-family:var(--mono); font-size:10px; color:var(--t2); }
-.pulse { width:7px; height:7px; border-radius:50%; animation:pulse 2s ease-in-out infinite; }
-.pulse.r { background:var(--red); box-shadow:0 0 8px var(--red); }
-.pulse.g { background:var(--grn); box-shadow:0 0 8px var(--grn); }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+/* Webcam panel */
+#wcam-panel{flex:1;display:flex;flex-direction:column;border-right:1px solid var(--b2);}
+#wcam-tabs{flex-shrink:0;display:flex;flex-wrap:wrap;gap:3px;padding:5px 7px;border-bottom:1px solid var(--b2);background:var(--s2);}
+.wt{font-family:var(--cond);font-size:10px;font-weight:700;padding:2px 8px;border-radius:2px;border:1px solid transparent;color:var(--t3);transition:all .15s;text-transform:uppercase;}
+.wt.on{background:var(--red);color:#fff;}
+#wcam-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--b2);overflow:hidden;}
+.wc{background:#000;position:relative;overflow:hidden;cursor:pointer;}
+.wc img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s;}
+.wc:hover img{transform:scale(1.05);}
+.wc-lbl{position:absolute;bottom:0;left:0;right:0;padding:3px 6px;background:linear-gradient(transparent,rgba(0,0,0,.85));font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:1px;color:#fff;display:flex;align-items:center;gap:3px;}
+.wc-dot{width:5px;height:5px;border-radius:50%;background:var(--red);animation:blink 1.5s infinite;flex-shrink:0;}
+.wc.dead{background:#0a0c10;}
+.wc.dead::after{content:"OFFLINE";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;color:var(--t3);letter-spacing:2px;}
 
-#top-kpis { display:flex; gap:0; margin-left:auto; }
-.tkpi { display:flex; flex-direction:column; align-items:flex-end; padding:0 14px; border-left:1px solid var(--border); }
-.tkpi-val { font-family:var(--mono); font-size:16px; font-weight:600; line-height:1; }
-.tkpi-label { font-family:var(--cond); font-size:8px; letter-spacing:2px; text-transform:uppercase; color:var(--t3); margin-top:2px; }
+/* AI panel */
+#ai-panel{width:258px;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;}
+.ai-sec{padding:9px;border-bottom:1px solid var(--b2);flex-shrink:0;}
+.ai-sec-t{font-family:var(--mono);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:6px;}
+.ai-brief{font-size:11px;color:var(--t1);line-height:1.65;}
+.ai-th{background:var(--s2);border:1px solid var(--b2);border-left:3px solid;border-radius:2px;padding:7px 8px;margin-bottom:4px;}
+.ai-th-t{font-family:var(--cond);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.ai-crit{font-family:var(--mono);font-size:8px;font-weight:600;padding:1px 5px;border-radius:2px;color:#fff;}
+.ai-row{font-family:var(--mono);font-size:9px;color:var(--t2);margin-bottom:2px;}
+.ai-row b{color:var(--t1);}
+.ir{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.ir-nm{font-family:var(--cond);font-size:11px;width:65px;flex-shrink:0;}
+.ir-bg{flex:1;height:4px;background:var(--b1);border-radius:2px;overflow:hidden;}
+.ir-fill{height:100%;border-radius:2px;transition:width 1.5s cubic-bezier(.4,0,.2,1);width:0;}
+.ir-v{font-family:var(--mono);font-size:9px;color:var(--t2);width:22px;text-align:right;}
+.ir-a{font-size:9px;width:10px;}
 
-#clock { font-family:var(--mono); font-size:17px; font-weight:500; color:var(--acc); text-shadow:0 0 12px rgba(0,212,255,.4); padding-left:14px; border-left:1px solid var(--border); }
+/* === FEED GRID (scrolls naturally below sticky sections) === */
+#feed-grid{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--b2);}
+.fc{border-right:1px solid var(--b2);display:flex;flex-direction:column;}
+.fc:last-child{border-right:none;}
+.fc-hdr{position:sticky;top:40px;z-index:600;padding:7px 10px;background:var(--s2);border-bottom:1px solid var(--b2);display:flex;align-items:center;gap:6px;}
+.fc-title{font-family:var(--cond);font-size:12px;font-weight:700;flex:1;}
+.fc-live{font-family:var(--mono);font-size:7px;font-weight:600;background:var(--red);color:#fff;padding:1px 4px;border-radius:2px;animation:blink 2s infinite;}
+.fc-cnt{font-family:var(--mono);font-size:10px;color:var(--t3);}
+.fc-tabs{position:sticky;top:65px;z-index:500;display:flex;border-bottom:1px solid var(--b2);background:var(--s1);}
+.fc-tab{flex:1;padding:5px 0;text-align:center;font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:none;color:var(--t3);background:transparent;border-bottom:2px solid transparent;transition:all .15s;}
+.fc-tab.on{color:var(--acc);border-bottom-color:var(--acc);}
+.ni{padding:9px 10px;border-bottom:1px solid var(--b1);cursor:pointer;display:block;transition:background .1s;}
+.ni:hover{background:var(--s2);}
+.ni-src{font-family:var(--mono);font-size:8px;color:var(--t3);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.at{font-family:var(--mono);font-size:7px;font-weight:600;padding:1px 5px;border-radius:2px;letter-spacing:1px;}
+.ni-title{font-size:12px;color:var(--t1);line-height:1.45;margin-bottom:3px;}
+.ni-time{font-family:var(--mono);font-size:8px;color:var(--t3);}
+.x-sel{display:flex;flex-wrap:wrap;gap:3px;padding:6px 8px;border-bottom:1px solid var(--b1);background:var(--s2);position:sticky;top:90px;z-index:400;}
+.xb{font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:9px;cursor:pointer;color:#1d9bf0;border:1px solid #1d9bf035;background:#1d9bf010;transition:all .15s;}
+.xb.on{background:#1d9bf030;border-color:#1d9bf0;}
+.xi{padding:8px 10px;border-bottom:1px solid var(--b1);}
+.xi-top{display:flex;align-items:center;gap:5px;margin-bottom:3px;}
+.xi-h{font-family:var(--mono);font-size:9px;color:#1d9bf0;font-weight:600;}
+.xi-t{font-family:var(--mono);font-size:8px;color:var(--t3);margin-left:auto;}
+.xi-txt{font-size:11px;color:var(--t1);line-height:1.45;}
+.xi-lnk{font-family:var(--mono);font-size:9px;color:var(--acc);display:inline-block;margin-top:3px;}
+.x-load{font-family:var(--mono);font-size:9px;color:var(--t3);padding:12px;text-align:center;}
+.x-fail{font-family:var(--mono);font-size:9px;color:var(--t3);padding:10px;line-height:1.7;}
+.x-fail a{color:#1d9bf0;}
+.src-w{padding:8px;}
+.s-chip{display:inline-block;font-family:var(--cond);font-size:10px;font-weight:600;padding:3px 9px;border-radius:2px;border:1px solid;margin:3px 3px 0 0;transition:filter .15s;}
+.s-chip:hover{filter:brightness(1.5);}
 
-#by-link { font-family:var(--mono); font-size:9px; color:var(--t3); text-decoration:none; padding:3px 10px; border:1px solid var(--border2); border-radius:2px; margin-left:14px; transition:all .2s; white-space:nowrap; }
-#by-link:hover { color:var(--acc); border-color:var(--acc); }
-
-/* ═══════════════════════════════════════════
-   TENSION BAR (below topbar)
-═══════════════════════════════════════════ */
-#tension-strip {
-  flex-shrink:0; height:28px; background:var(--surface2);
-  border-bottom:1px solid var(--border2);
-  display:flex; align-items:center; padding:0 14px; gap:12px;
-}
-#tension-label { font-family:var(--mono); font-size:9px; letter-spacing:2px; color:var(--t3); text-transform:uppercase; white-space:nowrap; }
-#tension-track { flex:1; height:5px; background:var(--border); border-radius:3px; position:relative; }
-#tension-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,#30f090 0%,#f0c330 45%,#f07330 72%,#f0334a 100%); transition:width 1.8s cubic-bezier(.4,0,.2,1); box-shadow:0 0 8px rgba(240,51,74,.3); width:0; }
-#tension-needle { position:absolute; top:-5px; width:2px; height:15px; background:#fff; border-radius:1px; transition:left 1.8s cubic-bezier(.4,0,.2,1); box-shadow:0 0 6px rgba(255,255,255,.8); }
-#tension-val { font-family:var(--mono); font-size:11px; font-weight:600; color:var(--ora); white-space:nowrap; }
-.t-kpi { font-family:var(--mono); font-size:10px; padding:0 10px; border-left:1px solid var(--border); white-space:nowrap; }
-
-/* ═══════════════════════════════════════════
-   MAP
-═══════════════════════════════════════════ */
-#map { width:100%; height:100%; }
-.leaflet-tile-pane { filter:invert(1) hue-rotate(180deg) brightness(.65) saturate(.5) contrast(1.15); }
-.leaflet-control-attribution { display:none; }
-.leaflet-control-zoom a { background:var(--surface2)!important; color:var(--acc)!important; border-color:var(--border2)!important; }
-
-/* Map layer toggle bar */
-#layer-bar {
-  position:absolute; top:10px; left:10px; right:10px; z-index:1000;
-  display:flex; gap:6px; flex-wrap:wrap; align-items:center;
-}
-.layer-btn {
-  font-family:var(--cond); font-size:11px; font-weight:700; letter-spacing:.5px;
-  padding:4px 10px; border-radius:2px; cursor:pointer; border:1px solid; transition:all .15s;
-  background:rgba(7,9,13,.85); backdrop-filter:blur(4px); text-transform:uppercase;
-  display:flex; align-items:center; gap:5px;
-}
-.layer-btn .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-.layer-btn[data-l="guerra"]  { border-color:#f0334a50; color:#f0334a; }  .layer-btn[data-l="guerra"].on  { background:#f0334a; color:#000; }
-.layer-btn[data-l="crisis"]  { border-color:#f0733050; color:#f07330; } .layer-btn[data-l="crisis"].on  { background:#f07330; color:#000; }
-.layer-btn[data-l="tension"] { border-color:#f0c33050; color:#f0c330; }.layer-btn[data-l="tension"].on { background:#f0c330; color:#000; }
-.layer-btn[data-l="naval"]   { border-color:#00d4ff50; color:#00d4ff; } .layer-btn[data-l="naval"].on   { background:#00d4ff; color:#000; }
-.layer-btn[data-l="nuclear"] { border-color:#f0733050; color:#ff9100; }.layer-btn[data-l="nuclear"].on { background:#ff9100; color:#000; }
-.layer-btn[data-l="cyber"]   { border-color:#30f09050; color:#30f090; }.layer-btn[data-l="cyber"].on   { background:#30f090; color:#000; }
-.layer-btn[data-l="aéreo"]   { border-color:#9b5de550; color:#9b5de5; }.layer-btn[data-l="aéreo"].on   { background:#9b5de5; color:#fff; }
-
-/* Popup */
-.leaflet-popup-content-wrapper { background:rgba(12,15,22,.97)!important; border:1px solid var(--border2)!important; border-radius:3px!important; color:var(--t1)!important; box-shadow:0 8px 40px rgba(0,0,0,.9)!important; backdrop-filter:blur(8px); }
-.leaflet-popup-tip { background:#0c0f16!important; }
-.leaflet-popup-content { margin:12px 14px!important; min-width:280px; font-family:var(--sans)!important; }
-.leaflet-popup-close-button { color:var(--t2)!important; font-size:18px!important; }
-.pu-title { font-family:var(--cond); font-size:18px; font-weight:700; margin-bottom:3px; }
-.pu-tag { display:inline-block; font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:2px; padding:1px 7px; border-radius:1px; margin-bottom:7px; }
-.pu-desc { font-size:11px; color:var(--t2); line-height:1.55; margin-bottom:10px; }
-.pu-kpis { display:flex; gap:5px; margin-bottom:10px; }
-.pu-kpi { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:2px; padding:5px 4px; text-align:center; }
-.pu-kv { font-family:var(--mono); font-size:14px; font-weight:600; }
-.pu-kl { font-family:var(--cond); font-size:8px; letter-spacing:1px; color:var(--t3); text-transform:uppercase; }
-.pu-section-label { font-family:var(--mono); font-size:8px; letter-spacing:2px; color:var(--t3); text-transform:uppercase; margin-bottom:5px; }
-.pu-links { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px; }
-.pu-link { font-family:var(--cond); font-size:10px; font-weight:600; padding:2px 8px; border-radius:2px; text-decoration:none; border:1px solid; transition:filter .15s; }
-.pu-link:hover { filter:brightness(1.5); }
-.pu-xlink { font-family:var(--mono); font-size:10px; padding:2px 8px; border-radius:10px; text-decoration:none; color:#1d9bf0; border:1px solid #1d9bf040; background:#1d9bf010; transition:all .15s; }
-.pu-xlink:hover { background:#1d9bf025; }
-
-/* ═══════════════════════════════════════════
-   LEFT PANEL
-═══════════════════════════════════════════ */
-.panel-hdr {
-  flex-shrink:0; padding:8px 12px; border-bottom:1px solid var(--border);
-  font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:3px;
-  text-transform:uppercase; color:var(--t3); display:flex; align-items:center; gap:8px;
-}
-.panel-hdr .acc { color:var(--acc); }
-
-/* YouTube section */
-#yt-section { flex-shrink:0; border-bottom:2px solid var(--border2); }
-#yt-tabs { display:flex; background:var(--bg); border-bottom:1px solid var(--border); }
-.yt-tab { flex:1; padding:5px 2px; text-align:center; font-family:var(--cond); font-size:10px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; cursor:pointer; color:var(--t3); border:none; background:transparent; border-bottom:2px solid transparent; transition:all .15s; }
-.yt-tab.on { color:var(--red); border-bottom-color:var(--red); background:rgba(240,51,74,.05); }
-#yt-frame-wrap { height:154px; background:#000; position:relative; }
-#yt-frame-wrap iframe { width:100%; height:154px; border:none; display:block; }
-.live-badge { position:absolute; top:6px; left:6px; background:var(--red); color:#fff; font-family:var(--cond); font-size:9px; font-weight:900; letter-spacing:2px; padding:2px 6px; border-radius:1px; pointer-events:none; animation:pulse 1.5s infinite; z-index:5; }
-/* YouTube fallback — shows when iframe errors */
-#yt-fallback { display:none; width:100%; height:154px; background:#000; align-items:center; justify-content:center; flex-direction:column; gap:8px; }
-#yt-fallback.show { display:flex; }
-#yt-frame-wrap.error iframe { display:none; }
-#yt-frame-wrap.error #yt-fallback { display:flex; }
-.yt-fb-btn { font-family:var(--cond); font-size:12px; font-weight:700; color:var(--red); border:1px solid var(--red); padding:6px 16px; border-radius:2px; text-decoration:none; letter-spacing:1px; transition:all .15s; }
-.yt-fb-btn:hover { background:var(--red); color:#000; }
-.yt-fb-label { font-family:var(--mono); font-size:9px; color:var(--t3); }
-
-/* Conflict accordion */
-#conflicts-section { flex:1; overflow-y:auto; }
-.conflict-group { border-bottom:1px solid var(--border); }
-.cg-header { display:flex; align-items:center; gap:8px; padding:8px 12px; cursor:pointer; transition:background .12s; user-select:none; }
-.cg-header:hover { background:var(--surface2); }
-.cg-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; animation:pulse 3s ease-in-out infinite; }
-.cg-name { font-family:var(--cond); font-size:13px; font-weight:700; flex:1; }
-.cg-tag { font-family:var(--mono); font-size:8px; font-weight:600; letter-spacing:1px; padding:1px 5px; border-radius:1px; }
-.cg-int { font-family:var(--mono); font-size:11px; font-weight:600; }
-.cg-chevron { font-size:9px; color:var(--t3); transition:transform .2s; }
-.cg-header.open .cg-chevron { transform:rotate(180deg); }
-
-.cg-body { display:none; padding:0 12px 10px; }
-.cg-body.open { display:block; }
-
-/* KPIs inside group */
-.cg-kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-bottom:8px; margin-top:6px; }
-.cg-kpi { background:var(--surface2); border:1px solid var(--border); border-radius:2px; padding:4px; text-align:center; }
-.cg-kv { font-family:var(--mono); font-size:12px; font-weight:600; }
-.cg-kl { font-family:var(--cond); font-size:8px; letter-spacing:1px; text-transform:uppercase; color:var(--t3); }
-
-/* Sub-tabs: FUENTES / X / NOTICIAS */
-.cg-tabs { display:flex; gap:0; border:1px solid var(--border); border-radius:2px; margin-bottom:7px; overflow:hidden; }
-.cg-tab { flex:1; padding:3px 0; text-align:center; font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:1px; text-transform:uppercase; cursor:pointer; color:var(--t3); background:transparent; border:none; transition:all .15s; border-right:1px solid var(--border); }
-.cg-tab:last-child { border-right:none; }
-.cg-tab.on { color:var(--acc); background:rgba(0,212,255,.08); }
-
-.cg-content { min-height:60px; }
-
-/* Source links */
-.src-links { display:flex; flex-wrap:wrap; gap:3px; }
-.src-link { font-family:var(--cond); font-size:10px; font-weight:600; padding:2px 7px; border-radius:2px; text-decoration:none; border:1px solid; transition:filter .15s; }
-.src-link:hover { filter:brightness(1.5); }
-
-/* X feed */
-.x-feed { display:flex; flex-direction:column; gap:4px; }
-.x-item { background:var(--surface2); border:1px solid var(--border); border-radius:2px; padding:6px 8px; }
-.x-item-top { display:flex; align-items:center; gap:5px; margin-bottom:3px; }
-.x-handle { font-family:var(--mono); font-size:9px; color:#1d9bf0; font-weight:600; text-decoration:none; }
-.x-handle:hover { text-decoration:underline; }
-.x-time { font-family:var(--mono); font-size:8px; color:var(--t3); margin-left:auto; }
-.x-text { font-size:10px; color:var(--t1); line-height:1.45; }
-.x-link { font-family:var(--mono); font-size:9px; color:var(--acc); text-decoration:none; display:inline-block; margin-top:3px; }
-.x-loading { font-family:var(--mono); font-size:9px; color:var(--t3); padding:8px 0; text-align:center; }
-
-/* News feed inside conflict */
-.news-feed { display:flex; flex-direction:column; gap:4px; }
-.news-item { background:var(--surface2); border:1px solid var(--border); border-left:2px solid; border-radius:2px; padding:5px 7px; cursor:pointer; transition:background .12s; text-decoration:none; display:block; }
-.news-item:hover { background:var(--surface3); }
-.news-item-title { font-size:10px; color:var(--t1); line-height:1.4; margin-bottom:2px; }
-.news-item-meta { font-family:var(--mono); font-size:8px; color:var(--t3); }
-
-/* ═══════════════════════════════════════════
-   RIGHT PANEL — FEED EN VIVO
-═══════════════════════════════════════════ */
-#right-tabs { flex-shrink:0; display:flex; border-bottom:2px solid var(--border2); }
-.right-tab { flex:1; padding:9px 0; text-align:center; font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:2px; text-transform:uppercase; cursor:pointer; color:var(--t3); background:transparent; border:none; border-bottom:2px solid transparent; transition:all .15s; }
-.right-tab.on { color:var(--acc); border-bottom-color:var(--acc); background:rgba(0,212,255,.04); }
-
-#right-content { flex:1; overflow-y:auto; }
-
-.right-pane { display:none; }
-.right-pane.on { display:block; }
-
-/* Breaking news feed */
-.feed-item { padding:10px 12px; border-bottom:1px solid var(--border); transition:background .1s; }
-.feed-item:hover { background:var(--surface2); }
-.fi-row1 { display:flex; align-items:center; gap:6px; margin-bottom:3px; }
-.fi-tag { font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:1px; padding:1px 5px; border-radius:1px; }
-.fi-region { font-family:var(--cond); font-size:11px; color:var(--t2); flex:1; }
-.fi-time { font-family:var(--mono); font-size:9px; color:var(--t3); }
-.fi-title { font-family:var(--cond); font-size:14px; font-weight:600; line-height:1.3; margin-bottom:3px; cursor:pointer; text-decoration:none; color:var(--t1); display:block; }
-.fi-title:hover { color:var(--acc); }
-.fi-desc { font-size:10px; color:var(--t2); line-height:1.45; margin-bottom:5px; }
-.fi-kpis { display:flex; gap:4px; margin-bottom:5px; }
-.fi-kpi { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:2px; padding:3px; text-align:center; }
-.fi-kv { font-family:var(--mono); font-size:11px; font-weight:600; }
-.fi-kl { font-family:var(--cond); font-size:8px; letter-spacing:1px; color:var(--t3); text-transform:uppercase; }
-.fi-links { display:flex; flex-wrap:wrap; gap:3px; }
-.fi-link { font-family:var(--cond); font-size:9px; font-weight:600; padding:1px 6px; border-radius:2px; text-decoration:none; border:1px solid; transition:filter .15s; }
-.fi-link:hover { filter:brightness(1.5); }
-.fi-xlink { font-family:var(--mono); font-size:9px; padding:1px 7px; border-radius:8px; text-decoration:none; color:#1d9bf0; border:1px solid #1d9bf030; background:#1d9bf010; transition:all .15s; }
-.fi-xlink:hover { background:#1d9bf020; }
-
-/* Region intensity panel */
-#intensity-panel { flex-shrink:0; padding:10px 12px; border-top:1px solid var(--border2); background:var(--surface2); }
-.int-hdr { font-family:var(--mono); font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--t3); margin-bottom:8px; }
-.int-row { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
-.int-name { font-family:var(--cond); font-size:11px; color:var(--t2); width:105px; flex-shrink:0; }
-.int-bg { flex:1; height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
-.int-bar { height:100%; border-radius:2px; transition:width 1.4s cubic-bezier(.4,0,.2,1); width:0; }
-.int-val { font-family:var(--mono); font-size:9px; color:var(--t3); width:22px; text-align:right; }
-
-/* ═══════════════════════════════════════════
-   TICKER
-═══════════════════════════════════════════ */
-#ticker-bar {
-  height:28px; background:rgba(7,9,13,.98); border-top:1px solid var(--border2);
-  display:flex; align-items:center; overflow:hidden;
-}
-#ticker-label { padding:0 12px; height:100%; display:flex; align-items:center; font-family:var(--cond); font-size:11px; font-weight:900; letter-spacing:3px; color:#000; background:var(--red); box-shadow:6px 0 15px rgba(240,51,74,.4); flex-shrink:0; }
-#ticker-track { flex:1; overflow:hidden; position:relative; height:100%; }
-#ticker-inner { position:absolute; white-space:nowrap; display:flex; align-items:center; height:100%; animation:tickerMove 100s linear infinite; font-family:var(--mono); font-size:10px; color:var(--t2); }
-@keyframes tickerMove { 0%{transform:translateX(100vw)} 100%{transform:translateX(-100%)} }
-.t-item { margin-right:60px; cursor:pointer; transition:color .15s; }
-.t-item:hover { color:var(--acc); }
-.t-sep { color:var(--red); margin-right:60px; font-size:8px; }
-
-/* scrollbars */
-::-webkit-scrollbar { width:3px; }
-::-webkit-scrollbar-track { background:var(--bg); }
-::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
-
-/* animate animations */
-@keyframes slideIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
-.feed-item { animation:slideIn .3s ease both; }
+/* TICKER */
+#ticker{position:sticky;bottom:0;z-index:900;height:26px;background:rgba(7,9,13,.98);border-top:1px solid var(--b2);display:flex;align-items:center;overflow:hidden;}
+#tk-lbl{padding:0 12px;height:100%;display:flex;align-items:center;font-family:var(--cond);font-size:10px;font-weight:900;letter-spacing:3px;color:#000;background:var(--red);box-shadow:6px 0 14px rgba(229,51,74,.4);flex-shrink:0;}
+#tk-track{flex:1;overflow:hidden;position:relative;height:100%;}
+#tk-inner{position:absolute;white-space:nowrap;display:flex;align-items:center;height:100%;animation:ticker 110s linear infinite;font-family:var(--mono);font-size:10px;color:var(--t2);}
+.tk-i{margin-right:60px;cursor:pointer;transition:color .15s;}
+.tk-i:hover{color:var(--acc);}
+.tk-s{color:var(--red);margin-right:60px;}
 </style>
 </head>
 <body>
-<div id="app">
 
-<!-- ═══ TOPBAR ═══ -->
+<!-- TOPBAR -->
 <div id="topbar">
-  <div id="logo-area">
-    <span id="logo">SALA</span>
-    <span id="logo-sub">Siguiendo Atentamente Los Acontecimientos</span>
+  <span id="logo">SALA</span>
+  <span id="logo-sub">Siguiendo Atentamente Los Acontecimientos</span>
+  <div class="vsep"></div>
+  <div class="spill"><span class="dot r"></span><span style="color:var(--red)">LIVE</span></div>
+  <div class="vsep"></div>
+  <div class="spill"><span class="dot g"></span><span style="color:var(--t2)">FEEDS OK</span></div>
+  <div class="vsep"></div>
+  <span id="defcon">DEFCON 4</span>
+  <span style="font-family:var(--mono);font-size:10px;color:var(--t2)">22%</span>
+  <div id="top-right">
+    <div class="tkpi"><div class="tkv" style="color:var(--red)">18</div><div class="tkl">Conflictos</div></div>
+    <div class="tkpi"><div class="tkv" style="color:var(--yel)">47</div><div class="tkl">Países</div></div>
+    <div class="tkpi"><div class="tkv" style="color:var(--grn)" id="alcnt">16</div><div class="tkl">Alertas</div></div>
+    <div class="tkpi"><div class="tkv" style="color:var(--acc)">892</div><div class="tkl">Buques</div></div>
+    <div id="clock">--:--:-- UTC</div>
+    <a id="bylink" href="https://www.fedeandino.com" target="_blank" rel="noopener">fedeandino.com ↗</a>
   </div>
-  <div class="top-sep"></div>
-  <div class="status-pill"><span class="pulse r"></span> LIVE</div>
-  <div class="top-sep"></div>
-  <div class="status-pill"><span class="pulse g"></span> FEEDS OK</div>
-  <div class="top-sep"></div>
-  <div class="status-pill" style="color:var(--red)">⬤ 18 ACTIVOS</div>
-
-  <div id="top-kpis">
-    <div class="tkpi"><div class="tkpi-val" style="color:var(--red)">18</div><div class="tkpi-label">Conflictos</div></div>
-    <div class="tkpi"><div class="tkpi-val" style="color:var(--yel)">47</div><div class="tkpi-label">Países</div></div>
-    <div class="tkpi"><div class="tkpi-val" style="color:var(--grn)" id="alcnt">14</div><div class="tkpi-label">Alertas</div></div>
-    <div class="tkpi"><div class="tkpi-val" style="color:var(--acc)">892</div><div class="tkpi-label">Buques Desv.</div></div>
-  </div>
-
-  <div id="clock">--:--:--</div>
-  <a id="by-link" href="https://www.fedeandino.com" target="_blank" rel="noopener">fedeandino.com ↗</a>
 </div>
 
-<!-- ═══ TENSION STRIP ═══ -->
-<div id="tension-strip">
-  <span id="tension-label">// ÍNDICE DE TENSIÓN GLOBAL</span>
-  <div id="tension-track">
-    <div id="tension-fill"></div>
-    <div id="tension-needle"></div>
+<!-- MAP AREA -->
+<div id="map-area">
+  <div id="layers-sb">
+    <div class="ly-title">CAPAS</div>
+    <div id="layers-list"></div>
   </div>
-  <span id="tension-val">78 / 100</span>
-  <span class="t-kpi" style="color:var(--red)">Europa <b>95</b></span>
-  <span class="t-kpi" style="color:var(--ora)">MENA <b>85</b></span>
-  <span class="t-kpi" style="color:var(--yel)">África <b>72</b></span>
-  <span class="t-kpi" style="color:var(--acc)">Asia-Pac <b>70</b></span>
+  <div id="map-wrap">
+    <div id="time-filter">
+      <button class="tf" onclick="setTF(this)">1h</button>
+      <button class="tf" onclick="setTF(this)">6h</button>
+      <button class="tf" onclick="setTF(this)">24h</button>
+      <button class="tf" onclick="setTF(this)">48h</button>
+      <button class="tf on" onclick="setTF(this)">7d</button>
+      <button class="tf" onclick="setTF(this)">ALL</button>
+    </div>
+    <div id="region-bar">
+      <button class="rb" onclick="flyTo([22,15],2)">GLOBAL</button>
+      <button class="rb" onclick="flyTo([51,25],4)">EUROPA</button>
+      <button class="rb" onclick="flyTo([30,42],4)">MENA</button>
+      <button class="rb" onclick="flyTo([6,22],4)">ÁFRICA</button>
+      <button class="rb" onclick="flyTo([25,105],3)">ASIA</button>
+      <button class="rb" onclick="flyTo([-14,-58],3)">LATAM</button>
+    </div>
+    <div id="map-legend">
+      <div class="leg-i"><div class="leg-d" style="background:#e5334a"></div>High Alert</div>
+      <div class="leg-i"><div class="leg-d" style="background:#e07030"></div>Elevated</div>
+      <div class="leg-i"><div class="leg-d" style="background:#d4b830"></div>Monitoring</div>
+      <div class="leg-i"><div class="leg-d" style="background:#5a7a9a;border-radius:2px;width:9px;height:7px"></div>Base</div>
+      <div class="leg-i"><div class="leg-d" style="background:#ff9100"></div>Nuclear</div>
+    </div>
+    <div id="map"></div>
+  </div>
 </div>
 
-<!-- ═══ MAIN BODY ═══ -->
-<div id="body">
-
-  <!-- ══ LEFT PANEL ══ -->
-  <div id="left-panel">
-
-    <!-- YouTube Live -->
-    <div id="yt-section">
-      <div class="panel-hdr"><span class="acc">▶</span> TRANSMISIÓN EN VIVO</div>
-      <div id="yt-tabs"></div>
-      <div id="yt-frame-wrap">
-        <div class="live-badge">● EN VIVO</div>
-        <iframe id="yt-iframe" src="" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"></iframe>
-        <div id="yt-fallback">
-          <div class="yt-fb-label">Stream no disponible en este momento</div>
-          <a id="yt-direct-btn" class="yt-fb-btn" href="" target="_blank" rel="noopener">▶ ABRIR EN YOUTUBE</a>
-        </div>
+<!-- PANELS -->
+<div id="panels">
+  <!-- TV -->
+  <div id="tv-panel">
+    <div class="ph"><span class="ph-t">LIVE NEWS</span><span class="live-badge">● LIVE</span></div>
+    <div id="tv-tabs"></div>
+    <div id="tv-frame">
+      <div class="tv-ov">● EN VIVO</div>
+      <iframe id="tv-iframe" src="" allowfullscreen allow="autoplay;encrypted-media" sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"></iframe>
+      <a id="tv-link" href="" target="_blank" rel="noopener">↗ Abrir en YouTube</a>
+      <div id="tv-err">
+        <span style="font-family:var(--mono);font-size:9px;color:var(--t3)">Stream no disponible</span>
+        <a id="tv-err-btn" href="" target="_blank" rel="noopener" class="tv-err-btn">▶ VER EN YOUTUBE</a>
       </div>
     </div>
-
-    <!-- Conflict Accordion -->
-    <div class="panel-hdr" style="border-top:2px solid var(--border2)"><span class="acc">◈</span> CONFLICTOS — FUENTES Y FEEDS</div>
-    <div id="conflicts-section"></div>
-
   </div>
-
-  <!-- ══ MAP ══ -->
-  <div id="map-area">
-    <div id="map"></div>
-    <div id="layer-bar"></div>
+  <!-- WEBCAMS -->
+  <div id="wcam-panel">
+    <div class="ph"><span class="ph-t">LIVE WEBCAMS</span><span class="live-badge">● LIVE</span></div>
+    <div id="wcam-tabs"></div>
+    <div id="wcam-grid"></div>
   </div>
-
-  <!-- ══ RIGHT PANEL ══ -->
-  <div id="right-panel">
-    <div id="right-tabs">
-      <button class="right-tab on" data-tab="situaciones" onclick="switchRightTab(this)">SITUACIONES</button>
-      <button class="right-tab" data-tab="noticias" onclick="switchRightTab(this)">NOTICIAS</button>
-      <button class="right-tab" data-tab="x-global" onclick="switchRightTab(this)">X GLOBAL</button>
+  <!-- AI -->
+  <div id="ai-panel">
+    <div class="ph"><span class="ph-t">AI INSIGHTS</span><span class="live-badge">● LIVE</span></div>
+    <div class="ai-sec">
+      <div class="ai-sec-t">◉ WORLD BRIEF</div>
+      <div class="ai-brief">Escalada MENA: Irán lanza misiles sobre Israel. Rusia intensifica drones sobre infraestructura ucraniana. Houthi mantiene presión en Mar Rojo. China realiza maniobras navales en estrecho de Taiwán sin aviso previo a EE.UU.</div>
     </div>
-    <div id="right-content">
-      <div id="pane-situaciones" class="right-pane on"></div>
-      <div id="pane-noticias" class="right-pane"></div>
-      <div id="pane-x-global" class="right-pane"></div>
+    <div class="ai-sec">
+      <div class="ai-sec-t">◉ POSTURA ESTRATÉGICA</div>
+      <div id="theaters"></div>
     </div>
-    <div id="intensity-panel">
-      <div class="int-hdr">// TENSIÓN POR REGIÓN</div>
+    <div class="ai-sec" style="flex:1;overflow-y:auto;">
+      <div class="ai-sec-t">◉ INESTABILIDAD PAÍS</div>
+      <div id="instability"></div>
     </div>
   </div>
-
-</div><!-- /body -->
-
-<!-- ═══ TICKER ═══ -->
-<div id="ticker-bar">
-  <div id="ticker-label">BREAKING</div>
-  <div id="ticker-track"><div id="ticker-inner"></div></div>
 </div>
 
-</div><!-- /app -->
+<!-- FEED GRID -->
+<div id="feed-grid"></div>
+
+<!-- TICKER -->
+<div id="ticker">
+  <div id="tk-lbl">BREAKING</div>
+  <div id="tk-track"><div id="tk-inner"></div></div>
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// ══════════════════════════════════════════════════════
-// DATA
-// ══════════════════════════════════════════════════════
+var TC={guerra:{f:"#e5334a",g:"rgba(229,51,74,.4)",bg:"#280009"},crisis:{f:"#e07030",g:"rgba(224,112,48,.4)",bg:"#281400"},tension:{f:"#d4b830",g:"rgba(212,184,48,.4)",bg:"#282000"},naval:{f:"#00d4ff",g:"rgba(0,212,255,.4)",bg:"#002530"},cyber:{f:"#2ec87a",g:"rgba(46,200,122,.4)",bg:"#002515"},nuclear:{f:"#ff9100",g:"rgba(255,145,0,.4)",bg:"#281800"}};
+var LAYERS_DEF=[{id:"iran",nm:"IRAN ATTACKS",ico:"🎯",c:"#ff9100",on:true},{id:"intel",nm:"INTEL HOTSPOTS",ico:"🔥",c:"#e5334a",on:true},{id:"conf",nm:"CONFLICT ZONES",ico:"✖",c:"#e5334a",on:true},{id:"bases",nm:"MILITARY BASES",ico:"🏛",c:"#5a7a9a",on:true},{id:"nuc",nm:"NUCLEAR SITES",ico:"☢",c:"#ff9100",on:true},{id:"gamma",nm:"GAMMA IRRADIATORS",ico:"⚠",c:"#d4b830",on:false},{id:"space",nm:"SPACEPORTS",ico:"🚀",c:"#7c55d4",on:false},{id:"cables",nm:"UNDERSEA CABLES",ico:"〰",c:"#00d4ff",on:false}];
+var YT=[{n:"Bloomberg",ids:["dp8PhLsUcFE","VWdITRAfkMM"],dir:"https://www.youtube.com/@BloombergTV/live"},{n:"Sky News",ids:["9Auq9mYxFEE"],dir:"https://www.youtube.com/@SkyNews/live"},{n:"Euronews",ids:["RHHXkRpuaHk"],dir:"https://www.youtube.com/@euronews/live"},{n:"DW",ids:["mSh1TaTQEts","86o_CqMcBQI"],dir:"https://www.youtube.com/@dwnews/live"},{n:"CNBC",ids:["CEp9UQfe4kQ"],dir:"https://www.youtube.com/@CNBC/live"},{n:"CNN",ids:["aO3JgMwJqqg"],dir:"https://www.youtube.com/@CNN/live"},{n:"France24",ids:["l8tWpViTkGs"],dir:"https://www.youtube.com/@FRANCE24/live"},{n:"AlJazeera",ids:["F4mB3_mOf1k"],dir:"https://www.youtube.com/@AlJazeeraEnglish/live"},{n:"AlArabiya",ids:["iYhVEFpJQbk"],dir:"https://www.youtube.com/@AlArabiya/live"}];
+var curCh=0,curId=0;
+var WZ={"IRAN ATTACKS":[{loc:"TEHERÁN",img:"https://images.earthcam.com/ec_metros/ourcams/tehran.jpg",url:"https://www.earthcam.com"},{loc:"TEL AVIV",img:"https://images.earthcam.com/ec_metros/ourcams/telaviv.jpg",url:"https://www.earthcam.com"},{loc:"JERUSALÉN",img:"https://images.earthcam.com/ec_metros/ourcams/jerus.jpg",url:"https://www.earthcam.com"},{loc:"LIMASSOL",img:"https://images.earthcam.com/ec_metros/ourcams/limassol.jpg",url:"https://www.earthcam.com"}],"ALL":[{loc:"NUEVA YORK",img:"https://images.earthcam.com/ec_metros/ourcams/timessquare.jpg",url:"https://www.earthcam.com/usa/newyork/timessquare/"},{loc:"LONDRES",img:"https://images.earthcam.com/ec_metros/ourcams/londoneyeuk.jpg",url:"https://www.earthcam.com/world/england/london/"},{loc:"TOKIO",img:"https://images.earthcam.com/ec_metros/ourcams/shibuya.jpg",url:"https://www.earthcam.com/world/japan/tokyo/"},{loc:"DUBAI",img:"https://images.earthcam.com/ec_metros/ourcams/dubaiiii.jpg",url:"https://www.earthcam.com/world/unitedarabemirates/dubai/"}],"MIDEAST":[{loc:"JERUSALEM",img:"https://images.earthcam.com/ec_metros/ourcams/jerus.jpg",url:"https://www.earthcam.com"},{loc:"DUBAI",img:"https://images.earthcam.com/ec_metros/ourcams/dubaiiii.jpg",url:"https://www.earthcam.com"},{loc:"CAIRO",img:"https://images.earthcam.com/ec_metros/ourcams/cairo.jpg",url:"https://www.earthcam.com"},{loc:"AMMAN",img:"https://images.earthcam.com/ec_metros/ourcams/amman.jpg",url:"https://www.earthcam.com"}],"EUROPE":[{loc:"PARIS",img:"https://images.earthcam.com/ec_metros/ourcams/paris2.jpg",url:"https://www.earthcam.com"},{loc:"BERLÍN",img:"https://images.earthcam.com/ec_metros/ourcams/berlin.jpg",url:"https://www.earthcam.com"},{loc:"KIEV",img:"https://images.earthcam.com/ec_metros/ourcams/kyiv.jpg",url:"https://www.earthcam.com"},{loc:"VARSOVIA",img:"https://images.earthcam.com/ec_metros/ourcams/warsaw.jpg",url:"https://www.earthcam.com"}],"AMERICAS":[{loc:"WASHINGTON",img:"https://images.earthcam.com/ec_metros/ourcams/dc.jpg",url:"https://www.earthcam.com"},{loc:"NYC",img:"https://images.earthcam.com/ec_metros/ourcams/timessquare.jpg",url:"https://www.earthcam.com"},{loc:"MIAMI",img:"https://images.earthcam.com/ec_metros/ourcams/miami.jpg",url:"https://www.earthcam.com"},{loc:"BS AIRES",img:"https://images.earthcam.com/ec_metros/ourcams/buenosaires.jpg",url:"https://www.earthcam.com"}],"ASIA":[{loc:"TAIPÉI",img:"https://images.earthcam.com/ec_metros/ourcams/taipei.jpg",url:"https://www.earthcam.com"},{loc:"SEÚL",img:"https://images.earthcam.com/ec_metros/ourcams/korea.jpg",url:"https://www.earthcam.com"},{loc:"TOKIO",img:"https://images.earthcam.com/ec_metros/ourcams/shibuya.jpg",url:"https://www.earthcam.com"},{loc:"HONG KONG",img:"https://images.earthcam.com/ec_metros/ourcams/hongkong.jpg",url:"https://www.earthcam.com"}]};
+var THEATERS=[{n:"Teatro Irán",sev:"CRIT",c:"#e5334a",air:2,sea:2,ves:11,trend:"→ estable"},{n:"Europa Oriental",sev:"ALTO",c:"#e07030",air:8,sea:0,ves:4,trend:"↑ escalando"},{n:"Mar Rojo",sev:"ALTO",c:"#e07030",air:1,sea:6,ves:18,trend:"→ estable"},{n:"Indo-Pacífico",sev:"MED",c:"#d4b830",air:4,sea:3,ves:9,trend:"→ estable"}];
+var INSTABILITY=[{n:"Ucrania",v:90,c:"#e5334a",a:"→"},{n:"Israel",v:85,c:"#e5334a",a:"↑"},{n:"Sudán",v:82,c:"#e5334a",a:"↑"},{n:"Irán",v:76,c:"#d4b830",a:"↑"},{n:"Yemén",v:78,c:"#e07030",a:"→"},{n:"Rusia",v:64,c:"#d4b830",a:"→"},{n:"Myanmar",v:68,c:"#d4b830",a:"→"},{n:"Haití",v:71,c:"#d4b830",a:"→"},{n:"Taiwán",v:55,c:"#d4b830",a:"↑"},{n:"C.Norte",v:60,c:"#d4b830",a:"→"}];
+var CONFLICTS=[{id:"ucrania",nm:"Ucrania / Rusia",tag:"guerra",int:95,lat:49,lng:32,desc:"Frentes activos en Kursk, Zaporiyia y Donetsk. +620K bajas estimadas.",lnk:[{l:"ISW",u:"https://understandingwar.org",c:"#7c55d4"},{l:"DeepStateMap",u:"https://deepstatemap.live",c:"#00d4ff"},{l:"Kyiv Indep.",u:"https://kyivindependent.com",c:"#00d4ff"},{l:"LiveUAMap",u:"https://liveuamap.com",c:"#e5334a"},{l:"Oryx",u:"https://www.oryxspioenkop.com",c:"#2ec87a"},{l:"Sentinel",u:"https://apps.sentinel-hub.com/eo-browser/",c:"#7c55d4"}],xl:["RALee85","UAWeapons","War_Mapper","GeoConfirmed","KofmanMichael"]},{id:"gaza",nm:"Gaza / Hamás / Israel",tag:"guerra",int:90,lat:31.5,lng:34.5,desc:"Operaciones israelíes en Gaza. +47K bajas civiles. Crisis humanitaria.",lnk:[{l:"MEE",u:"https://www.middleeasteye.net",c:"#09c"},{l:"Al Jazeera",u:"https://www.aljazeera.com",c:"#c4a029"},{l:"OCHA",u:"https://www.unocha.org/occupied-palestinian-territory",c:"#00b4d8"},{l:"ACLED",u:"https://acleddata.com",c:"#ff4081"},{l:"Bellingcat",u:"https://www.bellingcat.com",c:"#00d4ff"}],xl:["IntelCrab","OSINTdefender","MiddleEastEye","HawzhinOzodi"]},{id:"iran",nm:"Irán – Israel – MENA",tag:"tension",int:82,lat:32,lng:48,desc:"Ataques directos mutuos. AIEA: enriquecimiento iraní al 83.7%.",lnk:[{l:"IAEA",u:"https://www.iaea.org",c:"#7c55d4"},{l:"MEE",u:"https://www.middleeasteye.net",c:"#09c"},{l:"Reuters",u:"https://www.reuters.com/world/middle-east/",c:"#f60"},{l:"FlightRadar",u:"https://www.flightradar24.com",c:"#f60"}],xl:["KofmanMichael","IntelCrab","MiddleEastEye"]},{id:"marrojo",nm:"Mar Rojo / Houthi",tag:"naval",int:80,lat:14,lng:43,desc:"892 buques desviados del Canal de Suez. Ataques con misiles y drones.",lnk:[{l:"MarineTraffic",u:"https://www.marinetraffic.com",c:"#00b4d8"},{l:"VesselFinder",u:"https://www.vesselfinder.com",c:"#0077b6"},{l:"ADS-B",u:"https://www.adsbexchange.com",c:"#7c55d4"},{l:"The War Zone",u:"https://www.thedrive.com/the-war-zone",c:"#f60"}],xl:["TankerTrackers","IntelCrab","OSINTdefender"]},{id:"sudan",nm:"Sudán / SAF vs RSF",tag:"guerra",int:85,lat:15.5,lng:32.5,desc:"SAF vs RSF. +150K muertos. 10.8M desplazados.",lnk:[{l:"ACLED",u:"https://acleddata.com/sudan-crisis/",c:"#ff4081"},{l:"OCHA",u:"https://www.unocha.org/sudan",c:"#00b4d8"},{l:"Al Jazeera",u:"https://www.aljazeera.com/tag/sudan/",c:"#c4a029"}],xl:["OSINTdefender","Conflicts","IntelCrab"]},{id:"taiwan",nm:"Taiwán / DPRK / SCS",tag:"tension",int:75,lat:27,lng:120,desc:"Maniobras navales chinas. DPRK ICBM Hwasong-18. Disputas en SCS.",lnk:[{l:"FlightRadar",u:"https://www.flightradar24.com",c:"#f60"},{l:"38 North",u:"https://www.38north.org",c:"#ff9100"},{l:"MarineTraffic",u:"https://www.marinetraffic.com",c:"#00b4d8"}],xl:["IntelCrab","MT_Anderson"]},{id:"cyber",nm:"Ciberguerra Global",tag:"cyber",int:77,lat:51,lng:15,desc:"APT28/Sandworm activos contra infraestructura crítica occidental.",lnk:[{l:"CISA",u:"https://www.cisa.gov",c:"#2ec87a"},{l:"Mandiant",u:"https://www.mandiant.com/resources/blog",c:"#7c55d4"},{l:"AlienVault",u:"https://otx.alienvault.com",c:"#2ec87a"}],xl:["IntelCrab","OSINTdefender"]}];
+var FC=[{id:"world",title:"WORLD NEWS",c:"#e5334a",xl:["IntelCrab","OSINTdefender","GeoConfirmed","Conflicts"],news:[{src:"BBC WORLD",al:"ALERT",alc:"#e5334a",alb:"rgba(229,51,74,.2)",t:"9 muertos en ataque de misiles iraníes sobre Israel — escalada regional",ts:"2h"},{src:"AP NEWS",al:"ALERT",alc:"#e5334a",alb:"rgba(229,51,74,.2)",t:"EE.UU. e Israel preparan respuesta conjunta tras strikes iraníes sobre Tel Aviv",ts:"2h"},{src:"REUTERS",al:"",alc:"",alb:"",t:"Rusia lanza 83 drones Shahed sobre infraestructura energética ucraniana",ts:"3h"},{src:"AFP",al:"",alc:"",alb:"",t:"Consejo de Seguridad ONU convoca sesión de emergencia por escalada en Oriente Medio",ts:"4h"},{src:"THE GUARDIAN",al:"",alc:"",alb:"",t:"Petróleo Brent supera $94/barril tras cierre parcial del estrecho de Ormuz",ts:"5h"},{src:"DER SPIEGEL",al:"",alc:"",alb:"",t:"Alemania activa protocolo de emergencia energética ante posible corte iraní",ts:"6h"}]},{id:"eeuu",title:"UNITED STATES",c:"#00d4ff",xl:["IntelCrab","KofmanMichael"],news:[{src:"NPR NEWS",al:"ALERT",alc:"#e5334a",alb:"rgba(229,51,74,.2)",t:"3 soldados americanos muertos en Siria — guerra EE.UU.-Israel vs Irán (día 2)",ts:"12h"},{src:"POLITICO",al:"",alc:"",alb:"",t:"Strikes iraníes podrían remodelar dinámica electoral — tercer candidato emerge",ts:"3h"},{src:"CNBC",al:"",alc:"",alb:"",t:"Fed mantiene tasas pero advierte sobre inflación energética por conflicto MENA",ts:"4h"},{src:"PENTAGON",al:"MILITAR",alc:"#e07030",alb:"rgba(224,112,48,.2)",t:"Pentágono despliega segundo portaaviones al Mediterráneo oriental — USS Nimitz",ts:"5h"},{src:"WAPO",al:"",alc:"",alb:"",t:"Congreso debatirá autorización de uso de fuerza contra Irán la próxima semana",ts:"7h"}]},{id:"europa",title:"EUROPE",c:"#e07030",xl:["GeoConfirmed","OSINTdefender"],news:[{src:"DW NEWS",al:"ALERT",alc:"#e5334a",alb:"rgba(229,51,74,.2)",t:"Talibán afgano reporta ataque de jets pakistaníes sobre Kabul — dos muertos",ts:"2h"},{src:"EURONEWS",al:"",alc:"",alb:"",t:"Cancilleres europeos rechazan cambio de régimen en Irán pero juran proteger ciudadanos",ts:"3h"},{src:"LE MONDE",al:"",alc:"",alb:"",t:"Francia activa reservas estratégicas de petróleo ante crisis en Ormuz",ts:"5h"},{src:"THE TIMES",al:"",alc:"",alb:"",t:"Reino Unido despliega HMS Diamond al Mediterráneo oriental en apoyo a OTAN",ts:"6h"},{src:"DER SPIEGEL",al:"",alc:"",alb:"",t:"DAX cae 4.2%, FTSE -3.8% ante recesión por crisis energética ligada a MENA",ts:"7h"}]},{id:"mena",title:"MIDDLE EAST",c:"#e07030",xl:["IntelCrab","MiddleEastEye","HawzhinOzodi","TankerTrackers"],news:[{src:"THE WAR ZONE",al:"ALERT",alc:"#e5334a",alb:"rgba(229,51,74,.2)",t:"Guerra EE.UU.-Israel vs Irán entra en día dos — bombardeos sobre instalaciones nucleares",ts:"2h"},{src:"THE WAR ZONE",al:"MILITAR",alc:"#e07030",alb:"rgba(224,112,48,.2)",t:"Misil PrSM de EE.UU. hace debut en combate real en teatro de Oriente Medio",ts:"3h"},{src:"GUARDIAN ME",al:"ALERT",alc:"#e5334a",alb:"rgba(229,51,74,.2)",t:"Trump dice guerra EE.UU.-Irán podría durar 4 semanas — muertos superan 200",ts:"4h"},{src:"AL JAZEERA",al:"",alc:"",alb:"",t:"OCHA: 500.000 civiles desplazados en 24h en Gaza norte — corredor bloqueado",ts:"5h"},{src:"HAARETZ",al:"",alc:"",alb:"",t:"Gabinete israelí debate respuesta a ataques desde Yemen, Líbano e Irak simultáneos",ts:"6h"}]},{id:"africa",title:"AFRICA",c:"#d4b830",xl:["OSINTdefender","Conflicts","IntelCrab"],news:[{src:"BBC AFRICA",al:"ALERT",alc:"#e5334a",alb:"rgba(229,51,74,.2)",t:"Al menos 5 muertos en ataque RSF en Jartum Norte — combates intensos confirmados",ts:"3h"},{src:"ACLED",al:"",alc:"",alb:"",t:"ACLED: 47 nuevos incidentes de violencia en Sudán en 48 horas — récord mensual",ts:"5h"},{src:"JANES",al:"",alc:"",alb:"",t:"JNIM ataca convoy FAMA en Ségou (Mali) — 3 vehículos destruidos, 8 soldados",ts:"7h"},{src:"OCHA",al:"",alc:"",alb:"",t:"Somalia: AMISOM pierde control de dos distritos ante avance de Al-Shabaab",ts:"9h"},{src:"CFR",al:"",alc:"",alb:"",t:"Sahel: Burkina Faso, Mali y Níger registran récord de ataques yihadistas en 2026",ts:"12h"}]}];
+var TICKERS=[{t:"Irán lanza oleada de misiles balísticos sobre Israel — alerta en toda la región MENA",u:"https://www.middleeasteye.net"},{t:"Rusia lanza 83 drones Shahed en ataque nocturno sobre infraestructura energética ucraniana",u:"https://liveuamap.com"},{t:"China realiza ejercicios navales de 72h en estrecho de Taiwán sin aviso previo",u:"https://www.flightradar24.com"},{t:"Houthi reivindica ataque con misil YJ-12 a portacontenedores en Bab el-Mandeb",u:"https://www.marinetraffic.com"},{t:"AIEA: reservas iraníes de uranio al 83.7% — ONU convoca sesión de emergencia",u:"https://www.iaea.org"},{t:"CISA: APT28 activo en redes de infraestructura crítica de 6 países occidentales",u:"https://www.cisa.gov"},{t:"Brent supera $94/barril tras cierre parcial del estrecho de Ormuz",u:"https://www.reuters.com"},{t:"DPRK lanza tercer ICBM Hwasong-18 del año — trayectoria al Pacífico norte",u:"https://www.38north.org"}];
 
-var TC = {
-  guerra:  { f:'#f0334a', g:'rgba(240,51,74,.45)',  b:'#2a0009' },
-  crisis:  { f:'#f07330', g:'rgba(240,115,48,.45)', b:'#2a1200' },
-  tension: { f:'#f0c330', g:'rgba(240,195,48,.45)', b:'#2a2000' },
-  naval:   { f:'#00d4ff', g:'rgba(0,212,255,.45)',  b:'#002530' },
-  nuclear: { f:'#ff9100', g:'rgba(255,145,0,.45)',  b:'#2a1800' },
-  cyber:   { f:'#30f090', g:'rgba(48,240,144,.45)', b:'#002515' },
-  aéreo:   { f:'#9b5de5', g:'rgba(155,93,229,.45)', b:'#180a2a' },
-};
-
-// YouTube channels with multiple fallback IDs
-var YT_CHANNELS = [
-  { n:'Al Jazeera', ids:['F4mB3_mOf1k','nGTSqAeKMO4','XWq5kBlakcQ'], direct:'https://www.youtube.com/@AlJazeeraEnglish/live' },
-  { n:'France 24',  ids:['l8tWpViTkGs','fmZaaknL4gw'], direct:'https://www.youtube.com/@FRANCE24/live' },
-  { n:'DW News',    ids:['mSh1TaTQEts','86o_CqMcBQI'], direct:'https://www.youtube.com/@dwnews/live' },
-  { n:'Euronews',   ids:['RHHXkRpuaHk'], direct:'https://www.youtube.com/@euronews/live' },
-  { n:'Bloomberg',  ids:['dp8PhLsUcFE'], direct:'https://www.youtube.com/@BloombergTV/live' },
-];
-var currentChannel = 0;
-var currentIdIndex = 0;
-
-// X accounts by conflict — these get pulled via nitter RSS
-var CONFLICTS = [
-  {
-    id:'ucrania', name:'Ucrania / Rusia', tag:'guerra', int:95, alertas:8, paises:50,
-    lat:49, lng:32, desc:'Conflicto armado activo. Frentes en Kursk, Zaporiyia y Donetsk. +620K bajas totales estimadas.',
-    color:'#f0334a',
-    links:[
-      {l:'ISW Daily',    u:'https://understandingwar.org',c:'#7c4dff'},
-      {l:'DeepStateMap', u:'https://deepstatemap.live',c:'#00b4d8'},
-      {l:'Kyiv Indep.',  u:'https://kyivindependent.com',c:'#00d4ff'},
-      {l:'LiveUAMap',    u:'https://liveuamap.com',c:'#f0334a'},
-      {l:'Oryx Losses',  u:'https://www.oryxspioenkop.com',c:'#4caf50'},
-      {l:'Sentinel Hub', u:'https://apps.sentinel-hub.com/eo-browser/',c:'#9b5de5'},
-      {l:'FlightRadar24',u:'https://www.flightradar24.com',c:'#f60'},
-    ],
-    xAccounts:[
-      {h:'@RALee85',      u:'https://x.com/RALee85',      rss:'https://rsshub.app/x/user/RALee85'},
-      {h:'@UAWeapons',    u:'https://x.com/UAWeapons',    rss:'https://rsshub.app/x/user/UAWeapons'},
-      {h:'@War_Mapper',   u:'https://x.com/War_Mapper',   rss:'https://rsshub.app/x/user/War_Mapper'},
-      {h:'@GeoConfirmed', u:'https://x.com/GeoConfirmed', rss:'https://rsshub.app/x/user/GeoConfirmed'},
-      {h:'@KofmanMichael',u:'https://x.com/KofmanMichael',rss:'https://rsshub.app/x/user/KofmanMichael'},
-    ]
-  },
-  {
-    id:'gaza', name:'Gaza / Hamás / Israel', tag:'guerra', int:90, alertas:6, paises:6,
-    lat:31.5, lng:34.4, desc:'Operaciones israelíes en Gaza. Crisis humanitaria severa. +47K bajas civiles estimadas.',
-    color:'#f07330',
-    links:[
-      {l:'Middle East Eye',u:'https://www.middleeasteye.net',c:'#09c'},
-      {l:'Al Jazeera',     u:'https://www.aljazeera.com/tag/israel-palestine-conflict/',c:'#c4a029'},
-      {l:'OCHA',           u:'https://www.unocha.org/occupied-palestinian-territory',c:'#00b4d8'},
-      {l:'ACLED Gaza',     u:'https://acleddata.com/israel-palestine-crisis/',c:'#ff4081'},
-      {l:'Bellingcat',     u:'https://www.bellingcat.com',c:'#00d4ff'},
-    ],
-    xAccounts:[
-      {h:'@IntelCrab',     u:'https://x.com/IntelCrab',     rss:'https://rsshub.app/x/user/IntelCrab'},
-      {h:'@OSINTdefender', u:'https://x.com/OSINTdefender', rss:'https://rsshub.app/x/user/OSINTdefender'},
-      {h:'@MiddleEastEye', u:'https://x.com/MiddleEastEye', rss:'https://rsshub.app/x/user/MiddleEastEye'},
-      {h:'@HawzhinOzodi',  u:'https://x.com/HawzhinOzodi',  rss:'https://rsshub.app/x/user/HawzhinOzodi'},
-    ]
-  },
-  {
-    id:'iran', name:'Tensión Irán – Israel', tag:'tension', int:82, alertas:4, paises:6,
-    lat:32, lng:35.5, desc:'Intercambio de ataques directos. Programa nuclear iraní supera 83.7% de enriquecimiento.',
-    color:'#f0c330',
-    links:[
-      {l:'Middle East Eye',u:'https://www.middleeasteye.net',c:'#09c'},
-      {l:'AIEA / IAEA',    u:'https://www.iaea.org',c:'#7c4dff'},
-      {l:'Reuters MENA',   u:'https://www.reuters.com/world/middle-east/',c:'#f60'},
-      {l:'FlightRadar24',  u:'https://www.flightradar24.com',c:'#f60'},
-    ],
-    xAccounts:[
-      {h:'@KofmanMichael', u:'https://x.com/KofmanMichael', rss:'https://rsshub.app/x/user/KofmanMichael'},
-      {h:'@IntelCrab',     u:'https://x.com/IntelCrab',     rss:'https://rsshub.app/x/user/IntelCrab'},
-      {h:'@MiddleEastEye', u:'https://x.com/MiddleEastEye', rss:'https://rsshub.app/x/user/MiddleEastEye'},
-    ]
-  },
-  {
-    id:'marrojo', name:'Mar Rojo – Houthi / Ormuz', tag:'naval', int:80, alertas:5, paises:8,
-    lat:14, lng:42.5, desc:'892 buques desviados del Canal de Suez. Ataques con misiles antibuque y drones.',
-    color:'#00d4ff',
-    links:[
-      {l:'MarineTraffic',  u:'https://www.marinetraffic.com',c:'#00b4d8'},
-      {l:'VesselFinder',   u:'https://www.vesselfinder.com',c:'#0077b6'},
-      {l:'ADS-B Exch.',    u:'https://www.adsbexchange.com',c:'#7c4dff'},
-      {l:'The War Zone',   u:'https://www.thedrive.com/the-war-zone',c:'#ff6b35'},
-      {l:'GlobalFishWatch',u:'https://globalfishingwatch.org/map',c:'#4caf50'},
-    ],
-    xAccounts:[
-      {h:'@TankerTrackers',u:'https://x.com/TankerTrackers',rss:'https://rsshub.app/x/user/TankerTrackers'},
-      {h:'@IntelCrab',     u:'https://x.com/IntelCrab',     rss:'https://rsshub.app/x/user/IntelCrab'},
-      {h:'@OSINTdefender', u:'https://x.com/OSINTdefender', rss:'https://rsshub.app/x/user/OSINTdefender'},
-    ]
-  },
-  {
-    id:'sudan', name:'Conflicto Sudán Civil', tag:'guerra', int:85, alertas:4, paises:2,
-    lat:15.5, lng:32.5, desc:'SAF vs RSF. +150K muertos. 10.8M desplazados. Crisis humanitaria masiva.',
-    color:'#f0334a',
-    links:[
-      {l:'ACLED Sudán',    u:'https://acleddata.com/sudan-crisis/',c:'#ff4081'},
-      {l:'OCHA Sudán',     u:'https://www.unocha.org/sudan',c:'#00b4d8'},
-      {l:'Al Jazeera',     u:'https://www.aljazeera.com/tag/sudan/',c:'#c4a029'},
-      {l:'Sentinel Hub',   u:'https://apps.sentinel-hub.com/eo-browser/',c:'#9b5de5'},
-    ],
-    xAccounts:[
-      {h:'@OSINTdefender', u:'https://x.com/OSINTdefender', rss:'https://rsshub.app/x/user/OSINTdefender'},
-      {h:'@Conflicts',     u:'https://x.com/Conflicts',     rss:'https://rsshub.app/x/user/Conflicts'},
-      {h:'@IntelCrab',     u:'https://x.com/IntelCrab',     rss:'https://rsshub.app/x/user/IntelCrab'},
-    ]
-  },
-  {
-    id:'taiwan', name:'Taiwán / DPRK / SCS', tag:'tension', int:75, alertas:3, paises:6,
-    lat:23.5, lng:118, desc:'Maniobras navales chinas en el estrecho. DPRK con ejercicios de ICBM. Disputas en SCS.',
-    color:'#f0c330',
-    links:[
-      {l:'FlightRadar24',  u:'https://www.flightradar24.com',c:'#f60'},
-      {l:'ADS-B Exch.',    u:'https://www.adsbexchange.com',c:'#7c4dff'},
-      {l:'38 North DPRK',  u:'https://www.38north.org',c:'#ff9100'},
-      {l:'MarineTraffic',  u:'https://www.marinetraffic.com',c:'#00b4d8'},
-      {l:'N2YO Sat.',      u:'https://www.n2yo.com',c:'#ffd600'},
-    ],
-    xAccounts:[
-      {h:'@IntelCrab',     u:'https://x.com/IntelCrab',     rss:'https://rsshub.app/x/user/IntelCrab'},
-      {h:'@MT_Anderson',   u:'https://x.com/MT_Anderson',   rss:'https://rsshub.app/x/user/MT_Anderson'},
-    ]
-  },
-  {
-    id:'sahel', name:'Sahel / África Occidental', tag:'crisis', int:72, alertas:3, paises:5,
-    lat:14, lng:2, desc:'JNIM e ISGS activos en Mali, Burkina Faso y Níger. Retiro de fuerzas occidentales.',
-    color:'#f07330',
-    links:[
-      {l:'ACLED Sahel',    u:'https://acleddata.com/africa/',c:'#ff4081'},
-      {l:'Al Jazeera Afr.',u:'https://www.aljazeera.com/africa/',c:'#c4a029'},
-      {l:'ISW',            u:'https://understandingwar.org',c:'#7c4dff'},
-      {l:'CFR Tracker',    u:'https://www.cfr.org/global-conflict-tracker',c:'#9c27b0'},
-    ],
-    xAccounts:[
-      {h:'@OSINTdefender', u:'https://x.com/OSINTdefender', rss:'https://rsshub.app/x/user/OSINTdefender'},
-      {h:'@Conflicts',     u:'https://x.com/Conflicts',     rss:'https://rsshub.app/x/user/Conflicts'},
-    ]
-  },
-  {
-    id:'cyber', name:'Ciberguerra Global', tag:'cyber', int:77, alertas:5, paises:30,
-    lat:51, lng:15, desc:'APT28/Sandworm activos contra infraestructura crítica en Europa y EE.UU.',
-    color:'#30f090',
-    links:[
-      {l:'CISA Alerts',    u:'https://www.cisa.gov/news-events/cybersecurity-advisories',c:'#4caf50'},
-      {l:'Recorded Future',u:'https://www.recordedfuture.com',c:'#4caf50'},
-      {l:'Mandiant',       u:'https://www.mandiant.com/resources/blog',c:'#9b5de5'},
-      {l:'AlienVault OTX', u:'https://otx.alienvault.com',c:'#30f090'},
-      {l:'GreyNoise',      u:'https://www.greynoise.io',c:'#9c27b0'},
-    ],
-    xAccounts:[
-      {h:'@IntelCrab',     u:'https://x.com/IntelCrab',     rss:'https://rsshub.app/x/user/IntelCrab'},
-      {h:'@OSINTdefender', u:'https://x.com/OSINTdefender', rss:'https://rsshub.app/x/user/OSINTdefender'},
-    ]
-  },
-];
-
-// Static "news" per conflict (in real deployment these come from RSS)
-var STATIC_NEWS = {
-  ucrania:[
-    {title:'ISW: Rusia avanza en eje Kursk tras reorganización táctica',url:'https://understandingwar.org',time:'hace 2h'},
-    {title:'Ucrania reporta 78 drones interceptados en la noche',url:'https://kyivindependent.com',time:'hace 4h'},
-    {title:'Oryx confirma pérdida de 18 vehículos rusos en 24h',url:'https://www.oryxspioenkop.com',time:'hace 6h'},
-  ],
-  gaza:[
-    {title:'OCHA: situación humanitaria crítica en Gaza norte',url:'https://www.unocha.org/occupied-palestinian-territory',time:'hace 1h'},
-    {title:'Israel confirma operaciones en corredor Filadelfia',url:'https://www.middleeasteye.net',time:'hace 3h'},
-    {title:'Hamás reporta 127 muertos en bombardeos del día',url:'https://www.aljazeera.com',time:'hace 5h'},
-  ],
-  iran:[
-    {title:'AIEA: Irán acelera enriquecimiento en Fordow',url:'https://www.iaea.org',time:'hace 3h'},
-    {title:'Israel realiza ejercicios de respuesta ante misiles balísticos',url:'https://www.flightradar24.com',time:'hace 8h'},
-  ],
-  marrojo:[
-    {title:'Houthi ataca buque portacontenedores con misil YJ-12',url:'https://www.marinetraffic.com',time:'hace 1h'},
-    {title:'MarineTraffic: 12 buques desvían ruta Suez en las últimas 24h',url:'https://www.marinetraffic.com',time:'hace 5h'},
-    {title:'USS Gravely intercepta 3 drones sobre el estrecho',url:'https://www.thedrive.com/the-war-zone',time:'hace 7h'},
-  ],
-  sudan:[
-    {title:'RSF captura ciudad clave en el estado de Gezira',url:'https://acleddata.com/sudan-crisis/',time:'hace 4h'},
-    {title:'OCHA: 500K nuevos desplazados en marzo',url:'https://www.unocha.org/sudan',time:'hace 12h'},
-  ],
-  taiwan:[
-    {title:'DPRK lanza ICBM Hwasong-18 al Mar del Japón',url:'https://www.38north.org',time:'hace 2h'},
-    {title:'China envía 24 aviones de combate al ADIZ de Taiwán',url:'https://www.flightradar24.com',time:'hace 6h'},
-  ],
-  sahel:[
-    {title:'JNIM ataca convoy de FAMA en región de Ségou',url:'https://acleddata.com/africa/',time:'hace 5h'},
-    {title:'Burkina Faso: nuevo ataque a infraestructura energética',url:'https://www.aljazeera.com/africa/',time:'hace 9h'},
-  ],
-  cyber:[
-    {title:'CISA alerta sobre APT ruso activo en infraestructura crítica',url:'https://www.cisa.gov',time:'hace 1h'},
-    {title:'Ataque a red eléctrica estonia atribuido a Sandworm',url:'https://www.recordedfuture.com',time:'hace 3h'},
-    {title:'Mandiant detecta nueva campaña de phishing en sector OTAN',url:'https://www.mandiant.com',time:'hace 6h'},
-  ],
-};
-
-var TICKER_ITEMS = [
-  {t:'Rusia lanza 83 drones en ataque nocturno contra infraestructura energética ucraniana', u:'https://liveuamap.com'},
-  {t:'China realiza ejercicios navales de 72h en el estrecho de Taiwán sin previo aviso', u:'https://www.flightradar24.com'},
-  {t:'Houthi reivindica ataque con misil antibuque en el Mar Rojo — buque averiado', u:'https://www.marinetraffic.com'},
-  {t:'ISW: fuerzas rusas avanzan 3km en el eje Avdiivka-Pokrovsk en las últimas 48h', u:'https://understandingwar.org'},
-  {t:'AIEA confirma: reservas iraníes de uranio enriquecido al 83.7% aumentaron un 22%', u:'https://www.iaea.org'},
-  {t:'CISA emite alerta crítica sobre APT28 activo en redes de infraestructura occidental', u:'https://www.cisa.gov'},
-  {t:'ACLED: 47 muertos en nuevos enfrentamientos SAF-RSF en Jartum Norte', u:'https://acleddata.com'},
-  {t:'MarineTraffic: 892 buques desviados del Canal de Suez — récord histórico', u:'https://www.marinetraffic.com'},
-  {t:'DPRK lanza proyectil balístico de corto alcance al Mar del Japón', u:'https://www.38north.org'},
-];
-
-var INTENSITY_DATA = [
-  {r:'Europa del Este', v:95, c:'#f0334a'},
-  {r:'MENA',           v:85, c:'#f07330'},
-  {r:'África Sub-Sah.',v:72, c:'#f0c330'},
-  {r:'Asia-Pacífico',  v:70, c:'#f0c330'},
-  {r:'Asia del Sur',   v:62, c:'#00d4ff'},
-  {r:'América Latina', v:45, c:'#30f090'},
-];
-
-// Global X accounts for "X GLOBAL" right tab
-var X_GLOBAL = [
-  {h:'@IntelCrab',      u:'https://x.com/IntelCrab',      rss:'https://rsshub.app/x/user/IntelCrab'},
-  {h:'@OSINTdefender',  u:'https://x.com/OSINTdefender',  rss:'https://rsshub.app/x/user/OSINTdefender'},
-  {h:'@GeoConfirmed',   u:'https://x.com/GeoConfirmed',   rss:'https://rsshub.app/x/user/GeoConfirmed'},
-  {h:'@Conflicts',      u:'https://x.com/Conflicts',      rss:'https://rsshub.app/x/user/Conflicts'},
-  {h:'@RALee85',        u:'https://x.com/RALee85',        rss:'https://rsshub.app/x/user/RALee85'},
-  {h:'@TankerTrackers', u:'https://x.com/TankerTrackers', rss:'https://rsshub.app/x/user/TankerTrackers'},
-];
-
-// ══════════════════════════════════════════════════════
 // MAP
-// ══════════════════════════════════════════════════════
-var leafMap, mapMarkers={}, activeLayers={guerra:1,crisis:1,tension:1,naval:1,nuclear:1,cyber:1,aéreo:1};
+var leafMap,mk={},aL={};LAYERS_DEF.forEach(function(l){aL[l.id]=l.on;});
+function icon(tag,int){var tc=TC[tag]||TC.tension,sz=Math.max(10,Math.min(20,Math.round(10+(int-40)/60*10))),h=sz/2,sq=(tag==="naval"||tag==="cyber");return L.divIcon({html:"<div style='position:relative;width:"+sz+"px;height:"+sz+"px'><div style='position:absolute;top:-"+h+"px;left:-"+h+"px;width:"+(sz*2)+"px;height:"+(sz*2)+"px;border:1px solid "+tc.f+";opacity:.22;animation:ring 3s ease-out infinite;"+(sq?"border-radius:2px":"border-radius:50%")+"'></div><div style='width:"+sz+"px;height:"+sz+"px;background:"+tc.f+";box-shadow:0 0 "+(sz+2)+"px "+tc.g+";animation:mpulse 3s ease-in-out infinite;"+(sq?"border-radius:2px;transform:rotate(45deg)":"border-radius:50%")+"'></div></div>",iconSize:[sz,sz],iconAnchor:[h,h],className:""});}
+function popup(c){var tc=TC[c.tag]||TC.tension,ls=c.lnk.map(function(x){return"<a class='pu-chip' href='"+x.u+"' target='_blank' rel='noopener' style='color:"+x.c+";border-color:"+x.c+"40;background:"+x.c+"10'>"+x.l+"</a>";}).join(""),xs=c.xl.map(function(h){return"<a class='pu-xl' href='https://x.com/"+h+"' target='_blank' rel='noopener'>@"+h+"</a>";}).join("");return"<div class='pu-t' style='color:"+tc.f+"'>"+c.nm+"</div><span class='pu-b' style='color:"+tc.f+";border:1px solid "+tc.f+"50;background:"+tc.bg+"'>"+c.tag.toUpperCase()+" &nbsp;"+c.int+"/100</span><div class='pu-d'>"+c.desc+"</div><div class='pu-lbl'>FUENTES</div><div class='pu-chips'>"+ls+"</div><div class='pu-lbl' style='color:#1d9bf0;margin-top:4px'>𝕏 OSINT</div><div class='pu-chips'>"+xs+"</div>";}
+function drawMap(){for(var k in mk)leafMap.removeLayer(mk[k]);mk={};CONFLICTS.forEach(function(c){var tc=TC[c.tag]||TC.tension,m=L.marker([c.lat,c.lng],{icon:icon(c.tag,c.int)}).addTo(leafMap);L.circle([c.lat,c.lng],{radius:65000+c.int*5000,color:tc.f,fillColor:tc.f,fillOpacity:.04,opacity:.13,weight:1}).addTo(leafMap);m.bindPopup(popup(c),{maxWidth:285});mk[c.id]=m;});}
+function flyTo(ll,z){leafMap.flyTo(ll,z,{duration:1.2});}
+function setTF(btn){document.querySelectorAll(".tf").forEach(function(b){b.classList.remove("on");});btn.classList.add("on");}
+function initMap(){leafMap=L.map("map",{center:[22,20],zoom:2,zoomControl:true,attributionControl:false,minZoom:2,maxZoom:12});L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18}).addTo(leafMap);drawMap();}
+function buildLayers(){var el=document.getElementById("layers-list");LAYERS_DEF.forEach(function(l){var row=document.createElement("div");row.className="ly-row";row.innerHTML="<div class='ly-cb"+(l.on?" on":"")+"' id='lcb-"+l.id+"'></div><span class='ly-ico'>"+l.ico+"</span><span class='ly-lbl' style='color:"+l.c+"'>"+l.nm+"</span>";row.onclick=function(){aL[l.id]=!aL[l.id];document.getElementById("lcb-"+l.id).classList.toggle("on",aL[l.id]);};el.appendChild(row);});}
 
-document.head.insertAdjacentHTML('beforeend','<style>@keyframes mp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.15)}}@keyframes rp{0%{transform:scale(1);opacity:.35}100%{transform:scale(3.5);opacity:0}}</style>');
+// YT
+function loadYT(chi,idi){curCh=chi;curId=idi||0;var ch=YT[chi],id=ch.ids[curId]||ch.ids[0],f=document.getElementById("tv-iframe"),e=document.getElementById("tv-err");f.style.display="block";e.classList.remove("show");f.src="https://www.youtube.com/embed/"+id+"?autoplay=1&mute=1&rel=0&modestbranding=1";document.getElementById("tv-link").href=ch.dir;document.getElementById("tv-link").textContent="↗ "+ch.n+" en YouTube";document.getElementById("tv-err-btn").href=ch.dir;document.getElementById("tv-err-btn").textContent="▶ VER "+ch.n.toUpperCase();document.querySelectorAll(".tv-tab").forEach(function(t,i){t.classList.toggle("on",i===chi);});}
+function ytFail(){var ch=YT[curCh];if(curId+1<ch.ids.length){loadYT(curCh,curId+1);return;}document.getElementById("tv-iframe").style.display="none";document.getElementById("tv-err").classList.add("show");}
+window.addEventListener("message",function(e){try{if(e.data&&typeof e.data==="object"&&e.data.event==="onError")ytFail();}catch(x){}});
+function initYT(){var tabs=document.getElementById("tv-tabs");YT.forEach(function(ch,i){var b=document.createElement("button");b.className="tv-tab"+(i===0?" on":"");b.textContent=ch.n;b.onclick=function(){loadYT(i,0);};tabs.appendChild(b);});loadYT(0,0);}
 
-function makeIcon(tag,intensity){
-  var tc=TC[tag]||TC.tension, sz=Math.max(11,Math.min(20,Math.round(11+(intensity-40)/60*9)));
-  var h=sz/2, sq=(tag==='naval'||tag==='aéreo'||tag==='cyber');
-  return L.divIcon({
-    html:'<div style="position:relative;width:'+sz+'px;height:'+sz+'px">'+
-      '<div style="position:absolute;top:-'+h+'px;left:-'+h+'px;width:'+(sz*2)+'px;height:'+(sz*2)+'px;border:1.5px solid '+tc.f+';opacity:.25;animation:rp 3s ease-out infinite;'+(sq?'border-radius:2px':'border-radius:50%')+'"></div>'+
-      '<div style="width:'+sz+'px;height:'+sz+'px;background:'+tc.f+';box-shadow:0 0 '+(sz+2)+'px '+tc.g+';animation:mp 3s ease-in-out infinite;cursor:pointer;'+(sq?'border-radius:2px;transform:rotate(45deg)':'border-radius:50%')+'"></div></div>',
-    iconSize:[sz,sz],iconAnchor:[h,h],className:''
-  });
-}
+// WEBCAMS
+var curWZ=Object.keys(WZ)[0];
+function buildWTabs(){var tabs=document.getElementById("wcam-tabs");Object.keys(WZ).forEach(function(z,i){var b=document.createElement("button");b.className="wt"+(i===0?" on":"");b.textContent=z;b.onclick=function(){document.querySelectorAll(".wt").forEach(function(t){t.classList.remove("on");});b.classList.add("on");curWZ=z;renderWcams();};tabs.appendChild(b);});renderWcams();}
+function renderWcams(){var g=document.getElementById("wcam-grid");g.innerHTML="";(WZ[curWZ]||[]).forEach(function(cam){var d=document.createElement("div");d.className="wc";var img=document.createElement("img");img.alt=cam.loc;img.loading="lazy";img.src=cam.img;img.onerror=function(){d.classList.add("dead");img.style.display="none";};var lbl=document.createElement("div");lbl.className="wc-lbl";lbl.innerHTML="<span class='wc-dot'></span>"+cam.loc;d.onclick=function(){window.open(cam.url,"_blank","noopener");};d.appendChild(img);d.appendChild(lbl);g.appendChild(d);});}
 
-function buildPopup(c){
-  var tc=TC[c.tag]||TC.tension;
-  var ls=c.links.map(function(x){return '<a class="pu-link" href="'+x.u+'" target="_blank" rel="noopener" style="color:'+x.c+';border-color:'+x.c+'40;background:'+x.c+'12">'+x.l+'</a>';}).join('');
-  var xs=c.xAccounts.map(function(x){return '<a class="pu-xlink" href="'+x.u+'" target="_blank" rel="noopener">'+x.h+'</a>';}).join('');
-  return '<div class="pu-title" style="color:'+tc.f+'">'+c.name+'</div>'+
-    '<span class="pu-tag" style="background:'+tc.b+';color:'+tc.f+';border:1px solid '+tc.f+'40">'+c.tag.toUpperCase()+'</span>'+
-    '<div class="pu-desc">'+c.desc+'</div>'+
-    '<div class="pu-kpis">'+
-      '<div class="pu-kpi"><div class="pu-kv" style="color:'+tc.f+'">'+c.int+'/100</div><div class="pu-kl">Intensidad</div></div>'+
-      '<div class="pu-kpi"><div class="pu-kv" style="color:'+tc.f+'">'+c.alertas+'</div><div class="pu-kl">Alertas</div></div>'+
-      '<div class="pu-kpi"><div class="pu-kv" style="color:'+tc.f+'">'+c.paises+'</div><div class="pu-kl">Países</div></div>'+
-    '</div>'+
-    '<div class="pu-section-label">FUENTES & TRACKERS</div><div class="pu-links">'+ls+'</div>'+
-    '<div class="pu-section-label" style="color:#1d9bf0">𝕏 CUENTAS OSINT</div><div class="pu-links">'+xs+'</div>';
-}
+// AI
+function buildTheaters(){var el=document.getElementById("theaters");THEATERS.forEach(function(t){var d=document.createElement("div");d.className="ai-th";d.style.borderLeftColor=t.c;d.innerHTML="<div class='ai-th-t' style='color:"+t.c+"'>"+t.n+"<span class='ai-crit' style='background:"+t.c+"'>"+t.sev+"</span></div><div class='ai-row'>AIR ✈ <b>"+t.air+"</b> &nbsp; SEA ⚓ <b>"+t.sea+"</b> &nbsp; BUQUES <b>"+t.ves+"</b></div><div class='ai-row' style='color:"+t.c+"'>"+t.trend+"</div>";el.appendChild(d);});}
+function buildInstability(){var el=document.getElementById("instability");INSTABILITY.forEach(function(d){var row=document.createElement("div");row.className="ir";row.innerHTML="<span class='ir-nm'>"+d.n+"</span><div class='ir-bg'><div class='ir-fill' data-v='"+d.v+"' style='background:"+d.c+"'></div></div><span class='ir-v'>"+d.v+"</span><span class='ir-a' style='color:"+d.c+"'>"+d.a+"</span>";el.appendChild(row);});setTimeout(function(){document.querySelectorAll(".ir-fill").forEach(function(b){b.style.width=b.dataset.v+"%";});},600);}
 
-function renderMap(){
-  for(var k in mapMarkers)leafMap.removeLayer(mapMarkers[k]);
-  mapMarkers={};
-  CONFLICTS.forEach(function(c){
-    if(!activeLayers[c.tag])return;
-    var tc=TC[c.tag]||TC.tension;
-    var m=L.marker([c.lat,c.lng],{icon:makeIcon(c.tag,c.int)}).addTo(leafMap);
-    L.circle([c.lat,c.lng],{radius:70000+c.int*5000,color:tc.f,fillColor:tc.f,fillOpacity:.04,opacity:.15,weight:1}).addTo(leafMap);
-    m.bindPopup(buildPopup(c),{maxWidth:310});
-    mapMarkers[c.id]=m;
-  });
-}
+// X RSS
+var xC={};
+function fetchX(h,el){if(xC[h]){renderX(xC[h],h,el);return;}el.innerHTML="<div class='x-load'>Cargando @"+h+"…</div>";var rss="https://rsshub.app/x/user/"+h,px=["https://api.allorigins.win/get?url="+encodeURIComponent(rss),"https://corsproxy.io/?"+encodeURIComponent(rss)];tryX(px,0,h,el);}
+function tryX(px,i,h,el){if(i>=px.length){el.innerHTML="<div class='x-fail'>Sin API Key disponible.<br><a href='https://x.com/"+h+"' target='_blank' rel='noopener'>@"+h+" en X ↗</a></div>";return;}fetch(px[i]).then(function(r){return r.json();}).then(function(d){var xml=d.contents||"";if(typeof xml==="string"&&xml.length>100){var items=parseRSS(xml);if(items.length){xC[h]=items;renderX(items,h,el);return;}}throw 0;}).catch(function(){tryX(px,i+1,h,el);});}
+function parseRSS(xml){var out=[];try{var doc=new DOMParser().parseFromString(xml,"text/xml");doc.querySelectorAll("item,entry").forEach(function(n,i){if(i>5)return;var ti=n.querySelector("title"),li=n.querySelector("link"),pu=n.querySelector("pubDate,published,updated");if(ti)out.push({txt:(ti.textContent||"").replace(/<[^>]+>/g,"").trim().slice(0,220),url:li?(li.textContent||li.getAttribute("href")||""):"",time:pu?ago(new Date(pu.textContent)):""});});}catch(e){}return out;}
+function ago(d){var m=Math.floor((Date.now()-d)/6e4);if(isNaN(m)||m<0)return"";if(m<60)return m+"m";if(m<1440)return Math.floor(m/60)+"h";return Math.floor(m/1440)+"d";}
+function renderX(items,h,el){el.innerHTML="";items.forEach(function(item){var d=document.createElement("div");d.className="xi";d.innerHTML="<div class='xi-top'><a class='xi-h' href='https://x.com/"+h+"' target='_blank' rel='noopener'>@"+h+"</a><span class='xi-t'>"+item.time+"</span></div><div class='xi-txt'>"+item.txt+"</div>"+(item.url?"<a class='xi-lnk' href='"+item.url+"' target='_blank' rel='noopener'>Ver en X ↗</a>":"");el.appendChild(d);});}
 
-function flyToConflict(id){
-  var c=null; for(var i=0;i<CONFLICTS.length;i++){if(CONFLICTS[i].id===id){c=CONFLICTS[i];break;}}
-  if(!c)return;
-  leafMap.flyTo([c.lat,c.lng],5,{duration:1.3});
-  setTimeout(function(){if(mapMarkers[id])mapMarkers[id].openPopup();},1400);
-}
+// FEED GRID
+function buildGrid(){var grid=document.getElementById("feed-grid");FC.forEach(function(col){var fc=document.createElement("div");fc.className="fc";var hdr=document.createElement("div");hdr.className="fc-hdr";hdr.innerHTML="<span class='fc-title' style='color:"+col.c+"'>"+col.title+"</span><span class='fc-live'>● LIVE</span><span class='fc-cnt'>"+col.news.length+"</span>";fc.appendChild(hdr);var tabs=document.createElement("div");tabs.className="fc-tabs";var content=document.createElement("div");function showTab(ti){content.innerHTML="";if(ti===0){col.news.forEach(function(item){var a=document.createElement("div");a.className="ni";a.innerHTML="<div class='ni-src'>"+item.src+(item.al?"<span class='at' style='color:"+item.alc+";background:"+item.alb+"'>"+item.al+"</span>":"")+"</div><div class='ni-title'>"+item.t+"</div><div class='ni-time'>hace "+item.ts+"</div>";content.appendChild(a);});}else if(ti===1){var sel=document.createElement("div");sel.className="x-sel";var area=document.createElement("div");col.xl.forEach(function(h,ai){var btn=document.createElement("button");btn.className="xb"+(ai===0?" on":"");btn.textContent="@"+h;btn.onclick=function(){sel.querySelectorAll(".xb").forEach(function(b){b.classList.remove("on");});btn.classList.add("on");fetchX(h,area);};sel.appendChild(btn);});content.appendChild(sel);content.appendChild(area);if(col.xl.length)fetchX(col.xl[0],area);}else{var c2=null;for(var i=0;i<CONFLICTS.length;i++){if(CONFLICTS[i].id===col.id){c2=CONFLICTS[i];break;}}var wrap=document.createElement("div");wrap.className="src-w";if(c2)c2.lnk.forEach(function(lnk){var a=document.createElement("a");a.className="s-chip";a.href=lnk.u;a.target="_blank";a.rel="noopener";a.style.cssText="color:"+lnk.c+";border-color:"+lnk.c+"40;background:"+lnk.c+"10;";a.textContent=lnk.l;wrap.appendChild(a);});content.appendChild(wrap);}}["NOTICIAS","𝕏 OSINT","FUENTES"].forEach(function(nm,ti){var btn=document.createElement("button");btn.className="fc-tab"+(ti===0?" on":"");btn.textContent=nm;btn.onclick=function(){tabs.querySelectorAll(".fc-tab").forEach(function(b){b.classList.remove("on");});btn.classList.add("on");showTab(ti);};tabs.appendChild(btn);});fc.appendChild(tabs);fc.appendChild(content);showTab(0);grid.appendChild(fc);});}
 
-function initMap(){
-  leafMap=L.map('map',{center:[20,15],zoom:2,zoomControl:true,attributionControl:false,minZoom:2,maxZoom:12});
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(leafMap);
-  renderMap();
-}
+// TICKER + CLOCK
+function initTicker(){var inner=document.getElementById("tk-inner"),h=TICKERS.map(function(t){return"<span class='tk-i' onclick=\"window.open('"+t.u+"','_blank')\">"+t.t+"</span><span class='tk-s'>◆</span>";}).join("");inner.innerHTML=h+h;}
+function initClock(){(function tick(){var n=new Date();document.getElementById("clock").textContent=String(n.getUTCHours()).padStart(2,"0")+":"+String(n.getUTCMinutes()).padStart(2,"0")+":"+String(n.getUTCSeconds()).padStart(2,"0")+" UTC";if(Math.random()<.002){var e=document.getElementById("alcnt");if(e)e.textContent=+e.textContent+1;}setTimeout(tick,1000);})();}
 
-// Layer toggle bar
-function initLayerBar(){
-  var bar=document.getElementById('layer-bar');
-  var layers=['guerra','crisis','tension','naval','nuclear','cyber','aéreo'];
-  layers.forEach(function(l){
-    var tc=TC[l]||TC.tension;
-    var btn=document.createElement('button');
-    btn.className='layer-btn on'; btn.dataset.l=l;
-    btn.innerHTML='<span class="dot" style="background:'+tc.f+'"></span>'+l.toUpperCase();
-    btn.onclick=function(){
-      activeLayers[l]=activeLayers[l]?0:1;
-      btn.classList.toggle('on',!!activeLayers[l]);
-      renderMap();
-    };
-    bar.appendChild(btn);
-  });
-}
-
-// ══════════════════════════════════════════════════════
-// YOUTUBE — with fallback to next ID on error
-// ══════════════════════════════════════════════════════
-function loadYTChannel(chIdx,idIdx){
-  currentChannel=chIdx; currentIdIndex=idIdx||0;
-  var ch=YT_CHANNELS[chIdx]; if(!ch)return;
-  var id=ch.ids[idIdx||0]||ch.ids[0];
-  var wrap=document.getElementById('yt-frame-wrap');
-  var frame=document.getElementById('yt-iframe');
-  wrap.classList.remove('error');
-  frame.src='https://www.youtube.com/embed/'+id+'?autoplay=1&mute=1&rel=0&modestbranding=1';
-  document.getElementById('yt-direct-btn').href=ch.direct;
-  document.getElementById('yt-direct-btn').textContent='▶ VER '+ch.n.toUpperCase()+' EN YOUTUBE';
-  document.querySelectorAll('.yt-tab').forEach(function(t,i){t.classList.toggle('on',i===chIdx);});
-  // If iframe fails, YouTube sends postMessage — we listen for it
-}
-
-// Detect YouTube unavailable via iframe load
-function ytCheckLoad(){
-  var frame=document.getElementById('yt-iframe');
-  frame.onload=function(){
-    try {
-      // Can't access cross-origin frame, but if src is set and loaded without error, it's working
-      // We'll check via a 5s timeout if the frame height seems zero (common failure indicator)
-    } catch(e){}
-  };
-}
-
-// Listen for YouTube player errors via postMessage
-window.addEventListener('message',function(e){
-  if(e.data && typeof e.data==='object' && e.data.event==='infoDelivery'){
-    var info=e.data.info;
-    if(info && (info.playerState===0 || info.errorCode)){
-      // Try next ID
-      var ch=YT_CHANNELS[currentChannel];
-      if(ch && currentIdIndex+1 < ch.ids.length){
-        setTimeout(function(){loadYTChannel(currentChannel,currentIdIndex+1);},1000);
-      } else {
-        document.getElementById('yt-frame-wrap').classList.add('error');
-      }
-    }
-  }
-});
-
-function initYT(){
-  var tabs=document.getElementById('yt-tabs');
-  YT_CHANNELS.forEach(function(ch,i){
-    var btn=document.createElement('button');
-    btn.className='yt-tab'+(i===0?' on':''); btn.textContent=ch.n;
-    btn.onclick=function(){loadYTChannel(i,0);};
-    tabs.appendChild(btn);
-  });
-  loadYTChannel(0,0);
-}
-
-// ══════════════════════════════════════════════════════
-// CONFLICT ACCORDION
-// ══════════════════════════════════════════════════════
-var xCache={};
-
-function fetchXFeed(conflict,account,container){
-  var key=account.h;
-  if(xCache[key]){renderXItems(xCache[key],container,account);return;}
-  container.innerHTML='<div class="x-loading">Cargando '+account.h+'…</div>';
-  // Try multiple CORS proxies
-  var proxies=[
-    'https://api.allorigins.win/get?url='+encodeURIComponent(account.rss),
-    'https://corsproxy.io/?'+encodeURIComponent(account.rss),
-  ];
-  tryProxy(proxies,0,account,container);
-}
-
-function tryProxy(proxies,idx,account,container){
-  if(idx>=proxies.length){
-    container.innerHTML='<div class="x-loading">'+
-      'No disponible sin API Key.<br>'+
-      '<a href="'+account.u+'" target="_blank" rel="noopener" style="color:#1d9bf0;text-decoration:none;">Ver '+account.h+' en X ↗</a>'+
-    '</div>';
-    return;
-  }
-  fetch(proxies[idx])
-    .then(function(r){return r.json();})
-    .then(function(data){
-      var xml=data.contents||data;
-      if(typeof xml==='string'){
-        var items=parseRSSItems(xml);
-        if(items.length>0){xCache[account.h]=items;renderXItems(items,container,account);return;}
-      }
-      throw new Error('empty');
-    })
-    .catch(function(){tryProxy(proxies,idx+1,account,container);});
-}
-
-function parseRSSItems(xmlStr){
-  var items=[];
-  try {
-    var parser=new DOMParser();
-    var doc=parser.parseFromString(xmlStr,'text/xml');
-    var entries=doc.querySelectorAll('item,entry');
-    entries.forEach(function(item,i){
-      if(i>4)return;
-      var title=item.querySelector('title');
-      var link=item.querySelector('link');
-      var pub=item.querySelector('pubDate,published,updated');
-      if(title){
-        items.push({
-          text:(title.textContent||'').replace(/<[^>]+>/g,'').trim().substring(0,200),
-          url:link?(link.textContent||link.getAttribute('href')||''):'',
-          time:pub?timeAgo(new Date(pub.textContent)):'',
-        });
-      }
-    });
-  } catch(e){}
-  return items;
-}
-
-function timeAgo(date){
-  var diff=Math.floor((Date.now()-date.getTime())/60000);
-  if(diff<60)return 'hace '+diff+'m';
-  if(diff<1440)return 'hace '+Math.floor(diff/60)+'h';
-  return 'hace '+Math.floor(diff/1440)+'d';
-}
-
-function renderXItems(items,container,account){
-  container.innerHTML='';
-  var feed=document.createElement('div'); feed.className='x-feed';
-  items.forEach(function(item){
-    var d=document.createElement('div'); d.className='x-item';
-    d.innerHTML='<div class="x-item-top"><a class="x-handle" href="'+account.u+'" target="_blank" rel="noopener">'+account.h+'</a>'+
-      '<span class="x-time">'+item.time+'</span></div>'+
-      '<div class="x-text">'+item.text+'</div>'+
-      (item.url?'<a class="x-link" href="'+item.url+'" target="_blank" rel="noopener">Ver en X ↗</a>':'');
-    feed.appendChild(d);
-  });
-  container.appendChild(feed);
-}
-
-function buildConflictAccordion(){
-  var cont=document.getElementById('conflicts-section');
-  CONFLICTS.forEach(function(c){
-    var tc=TC[c.tag]||TC.tension;
-    var group=document.createElement('div'); group.className='conflict-group';
-
-    var hdr=document.createElement('div'); hdr.className='cg-header';
-    hdr.innerHTML='<div class="cg-dot" style="background:'+c.color+';box-shadow:0 0 6px '+c.color+'"></div>'+
-      '<div class="cg-name" style="color:'+c.color+'">'+c.name+'</div>'+
-      '<span class="cg-tag" style="background:'+tc.b+';color:'+c.color+'">'+c.tag.toUpperCase()+'</span>'+
-      '<span class="cg-int" style="color:'+c.color+'">'+c.int+'</span>'+
-      '<span class="cg-chevron">▼</span>';
-
-    var body=document.createElement('div'); body.className='cg-body';
-
-    // KPIs
-    var kpis='<div class="cg-kpis">'+
-      '<div class="cg-kpi"><div class="cg-kv" style="color:'+c.color+'">'+c.int+'/100</div><div class="cg-kl">Intensidad</div></div>'+
-      '<div class="cg-kpi"><div class="cg-kv" style="color:'+c.color+'">'+c.alertas+'</div><div class="cg-kl">Alertas</div></div>'+
-      '<div class="cg-kpi"><div class="cg-kv" style="color:'+c.color+'">'+c.paises+'</div><div class="cg-kl">Países</div></div>'+
-      '</div>';
-
-    // Sub-tabs
-    var tabs='<div class="cg-tabs">'+
-      '<button class="cg-tab on" data-t="fuentes">FUENTES</button>'+
-      '<button class="cg-tab" data-t="x">𝕏 OSINT</button>'+
-      '<button class="cg-tab" data-t="noticias">NOTICIAS</button>'+
-      '</div>';
-
-    var contentDiv=document.createElement('div'); contentDiv.className='cg-content';
-
-    body.innerHTML=kpis+tabs;
-    body.appendChild(contentDiv);
-
-    // Build fuentes content
-    var fuentesHtml='<div class="src-links">';
-    c.links.forEach(function(lnk){
-      fuentesHtml+='<a class="src-link" href="'+lnk.u+'" target="_blank" rel="noopener" style="color:'+lnk.c+';border-color:'+lnk.c+'40;background:'+lnk.c+'12">'+lnk.l+'</a>';
-    });
-    fuentesHtml+='</div>';
-    contentDiv.innerHTML=fuentesHtml;
-
-    // Tab switching
-    var activeSubTab='fuentes';
-    body.querySelectorAll('.cg-tab').forEach(function(tab){
-      tab.onclick=function(e){
-        e.stopPropagation();
-        body.querySelectorAll('.cg-tab').forEach(function(t){t.classList.remove('on');});
-        tab.classList.add('on');
-        activeSubTab=tab.dataset.t;
-        if(activeSubTab==='fuentes'){
-          contentDiv.innerHTML=fuentesHtml;
-        } else if(activeSubTab==='noticias'){
-          var news=STATIC_NEWS[c.id]||[];
-          var nh='<div class="news-feed">';
-          news.forEach(function(n){
-            nh+='<a class="news-item" href="'+n.url+'" target="_blank" rel="noopener" style="border-left-color:'+c.color+'">'+
-              '<div class="news-item-title">'+n.title+'</div>'+
-              '<div class="news-item-meta">'+n.time+'</div></a>';
-          });
-          nh+='</div>';
-          contentDiv.innerHTML=nh;
-        } else if(activeSubTab==='x'){
-          contentDiv.innerHTML='';
-          // Show account selector
-          var xSel=document.createElement('div');
-          xSel.style.cssText='display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;';
-          c.xAccounts.forEach(function(acc,ai){
-            var btn=document.createElement('button');
-            btn.style.cssText='font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:10px;cursor:pointer;color:#1d9bf0;border:1px solid #1d9bf040;background:#1d9bf010;transition:all .15s;';
-            btn.textContent=acc.h;
-            btn.onclick=function(e){
-              e.stopPropagation();
-              xSel.querySelectorAll('button').forEach(function(b){b.style.background='#1d9bf010';});
-              btn.style.background='#1d9bf030';
-              fetchXFeed(c.id,acc,xFeedArea);
-            };
-            if(ai===0)btn.style.background='#1d9bf030';
-            xSel.appendChild(btn);
-          });
-          var xFeedArea=document.createElement('div');
-          contentDiv.appendChild(xSel);
-          contentDiv.appendChild(xFeedArea);
-          if(c.xAccounts.length>0) fetchXFeed(c.id,c.xAccounts[0],xFeedArea);
-        }
-      };
-    });
-
-    // Click header → fly to map + toggle body
-    hdr.onclick=function(){
-      var isOpen=body.classList.contains('open');
-      // close all
-      document.querySelectorAll('.cg-body.open').forEach(function(b){b.classList.remove('open');});
-      document.querySelectorAll('.cg-header.open').forEach(function(h){h.classList.remove('open');});
-      if(!isOpen){
-        body.classList.add('open');
-        hdr.classList.add('open');
-        flyToConflict(c.id);
-      }
-    };
-
-    group.appendChild(hdr);
-    group.appendChild(body);
-    cont.appendChild(group);
-  });
-}
-
-// ══════════════════════════════════════════════════════
-// RIGHT PANEL
-// ══════════════════════════════════════════════════════
-function switchRightTab(btn){
-  document.querySelectorAll('.right-tab').forEach(function(t){t.classList.remove('on');});
-  document.querySelectorAll('.right-pane').forEach(function(p){p.classList.remove('on');});
-  btn.classList.add('on');
-  document.getElementById('pane-'+btn.dataset.tab).classList.add('on');
-}
-
-function buildSituationsPane(){
-  var pane=document.getElementById('pane-situaciones');
-  var sorted=CONFLICTS.slice().sort(function(a,b){return b.int-a.int;});
-  sorted.forEach(function(c){
-    var tc=TC[c.tag]||TC.tension;
-    var el=document.createElement('div'); el.className='feed-item';
-    var ml=c.links.slice(0,2).map(function(x){
-      return '<a class="fi-link" href="'+x.u+'" target="_blank" rel="noopener" style="color:'+x.c+';border-color:'+x.c+'40;background:'+x.c+'10" onclick="event.stopPropagation()">'+x.l+'</a>';
-    }).join('');
-    var mx=c.xAccounts.slice(0,2).map(function(x){
-      return '<a class="fi-xlink" href="'+x.u+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">'+x.h+'</a>';
-    }).join('');
-    el.innerHTML=
-      '<div class="fi-row1"><span class="fi-tag" style="background:'+tc.b+';color:'+tc.f+'">'+c.tag.toUpperCase()+'</span>'+
-      '<span class="fi-region" style="color:'+tc.f+'">'+c.name+'</span>'+
-      '<span class="fi-time" style="color:'+tc.f+'">'+c.int+'</span></div>'+
-      '<div class="fi-desc">'+c.desc.substring(0,90)+'</div>'+
-      '<div class="fi-kpis">'+
-        '<div class="fi-kpi"><div class="fi-kv" style="color:'+tc.f+'">'+c.int+'/100</div><div class="fi-kl">INT.</div></div>'+
-        '<div class="fi-kpi"><div class="fi-kv" style="color:'+tc.f+'">'+c.alertas+'</div><div class="fi-kl">ALERTAS</div></div>'+
-        '<div class="fi-kpi"><div class="fi-kv" style="color:'+tc.f+'">'+c.paises+'</div><div class="fi-kl">PAÍSES</div></div>'+
-      '</div>'+
-      '<div class="fi-links">'+ml+mx+'</div>';
-    el.addEventListener('click',function(){flyToConflict(c.id);});
-    el.style.animationDelay=(CONFLICTS.indexOf(c)*.05)+'s';
-    pane.appendChild(el);
-  });
-}
-
-function buildNoticiasPane(){
-  var pane=document.getElementById('pane-noticias');
-  var all=[];
-  CONFLICTS.forEach(function(c){
-    var news=STATIC_NEWS[c.id]||[];
-    news.forEach(function(n){all.push({n:n,c:c});});
-  });
-  all.sort(function(a,b){return a.n.time.localeCompare(b.n.time);});
-  all.forEach(function(item){
-    var tc=TC[item.c.tag]||TC.tension;
-    var el=document.createElement('div'); el.className='feed-item';
-    el.innerHTML='<div class="fi-row1"><span class="fi-tag" style="background:'+tc.b+';color:'+tc.f+'">'+item.c.tag.toUpperCase()+'</span>'+
-      '<span class="fi-region">'+item.c.name+'</span><span class="fi-time">'+item.n.time+'</span></div>'+
-      '<a class="fi-title" href="'+item.n.url+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">'+item.n.title+'</a>';
-    pane.appendChild(el);
-  });
-}
-
-function buildXGlobalPane(){
-  var pane=document.getElementById('pane-x-global');
-  var intro=document.createElement('div');
-  intro.style.cssText='padding:10px 12px;border-bottom:1px solid var(--border);';
-  intro.innerHTML='<div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:7px;">𝕏 SELECCIONAR CUENTA OSINT</div>'+
-    '<div id="x-global-selector" style="display:flex;flex-wrap:wrap;gap:4px;"></div>';
-  pane.appendChild(intro);
-  var feedArea=document.createElement('div'); feedArea.style.padding='8px 12px';
-  pane.appendChild(feedArea);
-
-  var sel=document.getElementById('x-global-selector');
-  X_GLOBAL.forEach(function(acc,i){
-    var btn=document.createElement('button');
-    btn.style.cssText='font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:10px;cursor:pointer;color:#1d9bf0;border:1px solid #1d9bf050;background:'+(i===0?'#1d9bf025':'#1d9bf010')+';transition:all .15s;';
-    btn.textContent=acc.h;
-    btn.onclick=function(){
-      sel.querySelectorAll('button').forEach(function(b){b.style.background='#1d9bf010';});
-      btn.style.background='#1d9bf025';
-      fetchXFeed('global',acc,feedArea);
-    };
-    sel.appendChild(btn);
-  });
-  if(X_GLOBAL.length>0) fetchXFeed('global',X_GLOBAL[0],feedArea);
-}
-
-function buildIntensityPanel(){
-  var p=document.getElementById('intensity-panel');
-  INTENSITY_DATA.forEach(function(d){
-    var r=document.createElement('div'); r.className='int-row';
-    r.innerHTML='<span class="int-name">'+d.r+'</span>'+
-      '<div class="int-bg"><div class="int-bar" data-v="'+d.v+'" style="background:'+d.c+'"></div></div>'+
-      '<span class="int-val">'+d.v+'</span>';
-    p.appendChild(r);
-  });
-  setTimeout(function(){
-    document.querySelectorAll('.int-bar').forEach(function(b){b.style.width=b.getAttribute('data-v')+'%';});
-  },900);
-}
-
-function initTicker(){
-  var inner=document.getElementById('ticker-inner');
-  var h=TICKER_ITEMS.map(function(t){
-    return '<span class="t-item" onclick="window.open(\''+t.u+'\',\'_blank\')">'+t.t+'</span><span class="t-sep">◆</span>';
-  }).join('');
-  inner.innerHTML=h+h;
-}
-
-function initClock(){
-  function tick(){
-    var n=new Date();
-    document.getElementById('clock').textContent=
-      String(n.getUTCHours()).padStart(2,'0')+':'+
-      String(n.getUTCMinutes()).padStart(2,'0')+':'+
-      String(n.getUTCSeconds()).padStart(2,'0')+' UTC';
-    if(Math.random()<.002){var e=document.getElementById('alcnt');if(e)e.textContent=+e.textContent+1;}
-  }
-  tick(); setInterval(tick,1000);
-}
-
-function initTensionMeter(){
-  setTimeout(function(){
-    document.getElementById('tension-fill').style.width='78%';
-    document.getElementById('tension-needle').style.left='78%';
-  },600);
-}
-
-// ══════════════════════════════════════════════════════
 // BOOT
-// ══════════════════════════════════════════════════════
-window.addEventListener('load',function(){
-  initMap();
-  initLayerBar();
-  initYT();
-  buildConflictAccordion();
-  buildSituationsPane();
-  buildNoticiasPane();
-  buildXGlobalPane();
-  buildIntensityPanel();
-  initTicker();
-  initClock();
-  initTensionMeter();
-});
+window.addEventListener("load",function(){initMap();buildLayers();initYT();buildWTabs();buildTheaters();buildInstability();buildGrid();initTicker();initClock();});
 </script>
 </body>
 </html>
