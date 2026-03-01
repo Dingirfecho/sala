@@ -94,6 +94,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 
 /* Link chips — TWO ROWS: media/trackers + X accounts */
 .ccard-section{padding:5px 8px 3px;border-top:1px solid var(--border);}
+.ccard-xsection{background:rgba(29,155,240,0.04);border-top:1px solid rgba(29,155,240,0.2);}
 .ccard-section-label{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;}
 .ccard-links{display:flex;flex-wrap:wrap;gap:3px;}
 .clink{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px;text-decoration:none;border:1px solid;transition:filter .15s;flex-shrink:0;white-space:nowrap;}
@@ -321,32 +322,33 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 // ================================================================
 // CHANNELS  — YouTube live channel IDs (stable embed URLs)
 // ================================================================
+// YouTube live: usar video IDs permanentes de los streams 24/7 de cada canal
+// Estos son los IDs de video de los livestreams continuos (no IDs de canal)
 var CHANNELS = [
   {
     label: 'Al Jazeera',
-    // Al Jazeera English official live stream channel
-    embed: 'https://www.youtube.com/embed/live_stream?channel=UCNye-wNBqNL5ZzHSJj3l8Bg&autoplay=1&mute=1',
-    direct: 'https://www.youtube.com/c/aljazeeraenglish/live'
+    embed: 'https://www.youtube.com/embed/F4mB3_mOf1k?autoplay=1&mute=1&rel=0&modestbranding=1',
+    direct: 'https://www.youtube.com/watch?v=F4mB3_mOf1k'
   },
   {
-    label: 'France 24',
-    embed: 'https://www.youtube.com/embed/live_stream?channel=UCQfwfsi5VrQ8yKZ-UWmAoBg&autoplay=1&mute=1',
-    direct: 'https://www.youtube.com/c/france24english/live'
+    label: 'France 24 EN',
+    embed: 'https://www.youtube.com/embed/h3MuIUNCCLI?autoplay=1&mute=1&rel=0&modestbranding=1',
+    direct: 'https://www.youtube.com/watch?v=h3MuIUNCCLI'
   },
   {
     label: 'DW News',
-    embed: 'https://www.youtube.com/embed/live_stream?channel=UCknLrEdhRCp1aegoMqRaCZg&autoplay=1&mute=1',
-    direct: 'https://www.youtube.com/c/dwnews/live'
+    embed: 'https://www.youtube.com/embed/mSh1TaTQEts?autoplay=1&mute=1&rel=0&modestbranding=1',
+    direct: 'https://www.youtube.com/watch?v=mSh1TaTQEts'
   },
   {
-    label: 'Euronews',
-    embed: 'https://www.youtube.com/embed/live_stream?channel=UCg2vOBfGhQhBFMVcRFMSzMg&autoplay=1&mute=1',
-    direct: 'https://www.youtube.com/c/euronews/live'
+    label: 'Euronews EN',
+    embed: 'https://www.youtube.com/embed/RHHXkRpuaHk?autoplay=1&mute=1&rel=0&modestbranding=1',
+    direct: 'https://www.youtube.com/watch?v=RHHXkRpuaHk'
   },
   {
-    label: 'WION',
-    embed: 'https://www.youtube.com/embed/live_stream?channel=UCwMuYDTsHMlv0mEzT0b1GpA&autoplay=1&mute=1',
-    direct: 'https://www.youtube.com/c/wion/live'
+    label: 'Bloomberg',
+    embed: 'https://www.youtube.com/embed/dp8PhLsUcFE?autoplay=1&mute=1&rel=0&modestbranding=1',
+    direct: 'https://www.youtube.com/watch?v=dp8PhLsUcFE'
   },
 ];
 
@@ -935,10 +937,11 @@ function initCards() {
     });
     linksHtml += '</div></div>';
 
-    // X section
-    var xHtml = '<div class="ccard-section"><div class="ccard-section-label">// CUENTAS X / OSINT</div><div class="ccard-links">';
+    // X section — prominent, with ✕ icon
+    var xHtml = '<div class="ccard-section ccard-xsection"><div class="ccard-section-label" style="color:#1d9bf0;">𝕏 CUENTAS OSINT EN X</div><div class="ccard-links">';
     card.xlinks.forEach(function(xl){
-      xHtml += '<a class="clink x-account" href="'+xl.u+'" target="_blank" rel="noopener" style="color:#1d9bf0;border-color:#1d9bf040;background:#1d9bf012">'+xl.l+'</a>';
+      xHtml += '<a class="clink x-account" href="'+xl.u+'" target="_blank" rel="noopener" '
+             + 'style="color:#1d9bf0;border-color:#1d9bf060;background:#1d9bf018;font-size:11px;">'+xl.l+'</a>';
     });
     xHtml += '</div></div>';
 
@@ -948,7 +951,8 @@ function initCards() {
     var cid = card.conflictId;
     div.addEventListener('click', function(e) {
       if (e.target.tagName === 'A') return;
-      var c = conflicts.find(function(x){return x.id===cid;});
+      var c = null;
+      for (var i=0;i<conflicts.length;i++){if(conflicts[i].id===cid){c=conflicts[i];break;}}
       if (!c) return;
       map.flyTo([c.lat, c.lng], 5, {duration:1.2});
       setTimeout(function(){
