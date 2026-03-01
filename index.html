@@ -2,690 +2,1089 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SALA — Siguiendo Atentamente Los Acontecimientos</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&family=Barlow:wght@300;400&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SALA — Monitor Global de Conflictos</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans+Condensed:wght@300;400;600;700&family=IBM+Plex+Sans:wght@300;400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
+/* ═══════════════════════════════════════════
+   BASE
+═══════════════════════════════════════════ */
 :root {
-  --bg:#080b0f; --panel:#0d1117; --card:#111820; --card2:#141c25;
-  --b:#1e2d3d; --bb:#2a4060;
-  --acc:#00e5ff; --t1:#e8f0f8; --t2:#7a9ab8; --t3:#3d5470;
-  --red:#ff3d57; --ora:#ff7c1a; --yel:#ffd600; --grn:#00ff87; --pur:#b44fff;
+  --bg: #07090d;
+  --surface: #0c0f16;
+  --surface2: #111620;
+  --surface3: #161d2a;
+  --border: #1a2535;
+  --border2: #243448;
+  --acc: #00d4ff;
+  --acc2: #0099cc;
+  --red: #f0334a;
+  --ora: #f07330;
+  --yel: #f0c330;
+  --grn: #30f090;
+  --pur: #9b5de5;
+  --t1: #dce8f5;
+  --t2: #6b8aaa;
+  --t3: #334455;
+  --t4: #1e2d40;
+  --mono: 'IBM Plex Mono', monospace;
+  --cond: 'IBM Plex Sans Condensed', sans-serif;
+  --sans: 'IBM Plex Sans', sans-serif;
 }
-*{margin:0;padding:0;box-sizing:border-box;}
-html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t1);font-family:'Barlow',sans-serif;font-size:13px;}
-body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,rgba(0,229,255,0.012) 0,transparent 1px,transparent 3px);pointer-events:none;z-index:9999;}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--t1); font-family:var(--sans); font-size:13px; }
 
-/* TOPBAR */
-#top{height:44px;background:var(--panel);border-bottom:1px solid var(--bb);display:flex;align-items:center;padding:0 14px;gap:12px;flex-shrink:0;z-index:100;}
-#logo{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:21px;letter-spacing:6px;color:var(--acc);text-shadow:0 0 20px rgba(0,229,255,0.5);line-height:1;}
-#logo small{font-size:9px;font-weight:300;letter-spacing:2px;color:var(--t2);display:block;margin-top:-2px;}
-.sdot{width:6px;height:6px;border-radius:50%;display:inline-block;animation:blink 2s infinite;}
-.sdot.r{background:var(--red);box-shadow:0 0 8px var(--red);}
-.sdot.g{background:var(--grn);box-shadow:0 0 8px var(--grn);}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-#sbar{display:flex;gap:9px;align-items:center;font-family:'Share Tech Mono',monospace;font-size:10px;}
-#bylink{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--t3);text-decoration:none;border:1px solid var(--b);padding:2px 9px;border-radius:2px;transition:all .2s;flex-shrink:0;}
-#bylink:hover{color:var(--acc);border-color:var(--acc);}
-#clock{font-family:'Share Tech Mono',monospace;font-size:17px;color:var(--acc);text-shadow:0 0 10px rgba(0,229,255,0.4);margin-left:auto;}
+/* Scanline overlay */
+body::after {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:9999;
+  background: repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0,212,255,0.008) 2px, rgba(0,212,255,0.008) 3px);
+}
 
-/* KPI BAR */
-#kpibar{height:50px;background:var(--panel);border-bottom:1px solid var(--bb);display:flex;align-items:stretch;flex-shrink:0;}
-#tmeter{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 14px;border-right:1px solid var(--b);}
-#tlab{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:5px;display:flex;justify-content:space-between;}
-#ttrack{height:6px;background:var(--b);border-radius:3px;position:relative;}
-#tfill{height:100%;border-radius:3px;background:linear-gradient(90deg,#00ff87,#ffd600 40%,#ff7c1a 70%,#ff3d57);transition:width 1.5s;box-shadow:0 0 10px rgba(255,61,87,.4);width:0%;}
-#tneedle{position:absolute;top:-4px;width:2px;height:14px;background:#fff;border-radius:1px;transition:left 1.5s;left:0%;}
-.kitem{display:flex;flex-direction:column;justify-content:center;align-items:center;border-right:1px solid var(--b);padding:0 14px;cursor:default;transition:background .15s;white-space:nowrap;}
-.kitem:last-child{border-right:none;}
-.kitem:hover{background:var(--card);}
-.kval{font-family:'Share Tech Mono',monospace;font-size:18px;font-weight:700;line-height:1.1;}
-.klab{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);}
-.ksub{font-family:'Share Tech Mono',monospace;font-size:9px;}
+/* ═══════════════════════════════════════════
+   LAYOUT SKELETON
+═══════════════════════════════════════════ */
+#app { display:flex; flex-direction:column; height:100vh; }
+#topbar { flex-shrink:0; }
+#body { display:flex; flex:1; min-height:0; }
+#left-panel { width:320px; flex-shrink:0; display:flex; flex-direction:column; min-height:0; border-right:1px solid var(--border); background:var(--surface); }
+#map-area { flex:1; position:relative; }
+#right-panel { width:340px; flex-shrink:0; display:flex; flex-direction:column; min-height:0; border-left:1px solid var(--border); background:var(--surface); }
+#ticker-bar { flex-shrink:0; }
 
-/* MAIN LAYOUT — 3 columns */
-#wrap{display:flex;flex-direction:column;height:100vh;}
-#main{display:grid;grid-template-columns:300px 1fr 360px;flex:1;min-height:0;}
+/* ═══════════════════════════════════════════
+   TOPBAR
+═══════════════════════════════════════════ */
+#topbar {
+  height:46px; background:var(--surface); border-bottom:1px solid var(--border2);
+  display:flex; align-items:center; padding:0 14px; gap:0;
+}
+#logo-area { display:flex; align-items:baseline; gap:10px; margin-right:18px; }
+#logo { font-family:var(--mono); font-weight:600; font-size:20px; letter-spacing:6px; color:var(--acc); text-shadow:0 0 20px rgba(0,212,255,.5); }
+#logo-sub { font-family:var(--mono); font-size:9px; font-weight:300; color:var(--t3); letter-spacing:2px; text-transform:uppercase; }
 
-/* Shared panel */
-.pane{background:var(--panel);border-right:1px solid var(--b);display:flex;flex-direction:column;min-height:0;}
-.phdr{padding:7px 12px;border-bottom:1px solid var(--b);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--t2);display:flex;align-items:center;gap:7px;flex-shrink:0;}
+.top-sep { width:1px; height:22px; background:var(--border2); margin:0 14px; }
 
-/* ═══ LEFT PANEL — explicit height split ═══
-   Top half: live video (fixed ~245px total)
-   Bottom half: X accounts + conflict cards (fills remaining space, itself split)
-*/
-#left{overflow:hidden;display:flex;flex-direction:column;}
+.status-pill { display:flex; align-items:center; gap:5px; font-family:var(--mono); font-size:10px; color:var(--t2); }
+.pulse { width:7px; height:7px; border-radius:50%; animation:pulse 2s ease-in-out infinite; }
+.pulse.r { background:var(--red); box-shadow:0 0 8px var(--red); }
+.pulse.g { background:var(--grn); box-shadow:0 0 8px var(--grn); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-/* LIVE section — fixed height, never grows */
-#livesec{flex:0 0 auto;border-bottom:2px solid var(--bb);}
-#chanbtns{display:flex;background:var(--bg);}
-.cbtn{flex:1;padding:4px 2px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;color:var(--t3);border-bottom:2px solid transparent;transition:all .15s;background:transparent;border-top:none;border-left:none;border-right:1px solid var(--b);}
-.cbtn:last-child{border-right:none;}
-.cbtn.on{color:var(--red);border-bottom-color:var(--red);background:rgba(255,61,87,.06);}
-.cbtn:hover{color:var(--t2);}
-#vwrap{background:#000;position:relative;height:148px;}
-#vwrap iframe{width:100%;height:148px;border:none;display:block;}
-.livebadge{position:absolute;top:5px;left:5px;background:var(--red);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:900;letter-spacing:2px;padding:2px 6px;border-radius:1px;z-index:10;pointer-events:none;animation:blink 1.5s infinite;}
-#livelink{padding:5px 10px;background:rgba(0,229,255,.06);font-size:10px;color:var(--t2);font-family:'Share Tech Mono',monospace;text-align:center;border-bottom:1px solid var(--b);}
-#livelink a{color:var(--acc);text-decoration:none;font-weight:bold;}
-#livelink a:hover{text-decoration:underline;}
+#top-kpis { display:flex; gap:0; margin-left:auto; }
+.tkpi { display:flex; flex-direction:column; align-items:flex-end; padding:0 14px; border-left:1px solid var(--border); }
+.tkpi-val { font-family:var(--mono); font-size:16px; font-weight:600; line-height:1; }
+.tkpi-label { font-family:var(--cond); font-size:8px; letter-spacing:2px; text-transform:uppercase; color:var(--t3); margin-top:2px; }
 
-/* ── BOTTOM HALF: X block + cards — split 50/50 of remaining space ── */
-#leftbottom{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
+#clock { font-family:var(--mono); font-size:17px; font-weight:500; color:var(--acc); text-shadow:0 0 12px rgba(0,212,255,.4); padding-left:14px; border-left:1px solid var(--border); }
 
-/* X ACCOUNTS — fixed 160px, always fully visible */
-#xblock{flex:0 0 160px;border-bottom:2px solid rgba(29,155,240,.3);background:rgba(29,155,240,.06);padding:7px 10px;overflow:hidden;}
-#xblock-hdr{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1d9bf0;margin-bottom:5px;display:flex;align-items:center;gap:6px;}
-#xblock-hdr span{font-size:8px;color:var(--t3);font-weight:400;}
-#xtabs{display:flex;gap:3px;margin-bottom:5px;flex-wrap:wrap;}
-.xtab{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px;cursor:pointer;color:var(--t3);border:1px solid var(--b);transition:all .15s;background:transparent;}
-.xtab.on{color:#1d9bf0;border-color:#1d9bf060;background:#1d9bf018;}
-.xtab:hover{color:var(--t2);}
-#xaccounts{display:flex;flex-wrap:wrap;gap:3px;}
-.xacc{font-family:'Share Tech Mono',monospace;font-size:10px;padding:2px 8px;border-radius:10px;text-decoration:none;color:#1d9bf0;border:1px solid #1d9bf050;background:#1d9bf010;transition:all .15s;white-space:nowrap;}
-.xacc:hover{background:#1d9bf025;border-color:#1d9bf0;box-shadow:0 0 8px rgba(29,155,240,.3);}
+#by-link { font-family:var(--mono); font-size:9px; color:var(--t3); text-decoration:none; padding:3px 10px; border:1px solid var(--border2); border-radius:2px; margin-left:14px; transition:all .2s; white-space:nowrap; }
+#by-link:hover { color:var(--acc); border-color:var(--acc); }
 
-/* CONFLICT CARDS — fills remaining space, scrollable */
-#cardshdr{flex:0 0 auto;padding:6px 12px;border-bottom:1px solid var(--b);font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t2);}
-#cardsscroll{flex:1;overflow-y:auto;padding:6px;min-height:0;}
+/* ═══════════════════════════════════════════
+   TENSION BAR (below topbar)
+═══════════════════════════════════════════ */
+#tension-strip {
+  flex-shrink:0; height:28px; background:var(--surface2);
+  border-bottom:1px solid var(--border2);
+  display:flex; align-items:center; padding:0 14px; gap:12px;
+}
+#tension-label { font-family:var(--mono); font-size:9px; letter-spacing:2px; color:var(--t3); text-transform:uppercase; white-space:nowrap; }
+#tension-track { flex:1; height:5px; background:var(--border); border-radius:3px; position:relative; }
+#tension-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,#30f090 0%,#f0c330 45%,#f07330 72%,#f0334a 100%); transition:width 1.8s cubic-bezier(.4,0,.2,1); box-shadow:0 0 8px rgba(240,51,74,.3); width:0; }
+#tension-needle { position:absolute; top:-5px; width:2px; height:15px; background:#fff; border-radius:1px; transition:left 1.8s cubic-bezier(.4,0,.2,1); box-shadow:0 0 6px rgba(255,255,255,.8); }
+#tension-val { font-family:var(--mono); font-size:11px; font-weight:600; color:var(--ora); white-space:nowrap; }
+.t-kpi { font-family:var(--mono); font-size:10px; padding:0 10px; border-left:1px solid var(--border); white-space:nowrap; }
 
-.cc{background:var(--card);border:1px solid var(--b);border-left-width:3px;border-radius:3px;margin-bottom:6px;cursor:pointer;transition:box-shadow .15s;}
-.cc:hover{box-shadow:0 0 14px rgba(0,0,0,.6);}
-.cctop{padding:6px 9px;display:flex;align-items:center;gap:6px;}
-.ccdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;animation:blink 2.5s infinite;}
-.ccname{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;flex:1;}
-.cctag{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:1px;padding:1px 5px;border-radius:1px;}
-.cckpis{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--b);}
-.cck{display:flex;flex-direction:column;align-items:center;padding:4px;border-right:1px solid var(--b);}
-.cck:last-child{border-right:none;}
-.cckv{font-family:'Share Tech Mono',monospace;font-size:12px;font-weight:700;}
-.cckl{font-family:'Barlow Condensed',sans-serif;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-top:1px;}
-.ccbar{height:3px;background:var(--b);}
-.ccbarf{height:100%;transition:width 1.5s;}
-.ccsec{padding:5px 8px 4px;border-top:1px solid var(--b);}
-.ccsecl{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:4px;}
-.cclinks{display:flex;flex-wrap:wrap;gap:3px;}
-.cclink{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px;text-decoration:none;border:1px solid;transition:filter .15s;}
-.cclink:hover{filter:brightness(1.5);}
+/* ═══════════════════════════════════════════
+   MAP
+═══════════════════════════════════════════ */
+#map { width:100%; height:100%; }
+.leaflet-tile-pane { filter:invert(1) hue-rotate(180deg) brightness(.65) saturate(.5) contrast(1.15); }
+.leaflet-control-attribution { display:none; }
+.leaflet-control-zoom a { background:var(--surface2)!important; color:var(--acc)!important; border-color:var(--border2)!important; }
 
-/* ═══ CENTER MAP ═══ */
-#center{display:flex;flex-direction:column;min-height:0;}
-#tagbar{padding:6px 12px;background:var(--panel);border-bottom:1px solid var(--b);display:flex;flex-wrap:wrap;gap:4px;align-items:center;flex-shrink:0;}
-.taglbl{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-right:4px;}
-.tbtn{padding:3px 9px;border-radius:2px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:1px;cursor:pointer;border:1px solid;transition:all .15s;background:transparent;text-transform:uppercase;}
-.tbtn[data-t="war"]{border-color:#ff3d57;color:#ff3d57;}.tbtn[data-t="war"].on{background:#ff3d57;color:#000;box-shadow:0 0 12px rgba(255,61,87,.4);}
-.tbtn[data-t="crisis"]{border-color:#ff7c1a;color:#ff7c1a;}.tbtn[data-t="crisis"].on{background:#ff7c1a;color:#000;box-shadow:0 0 12px rgba(255,124,26,.4);}
-.tbtn[data-t="tension"]{border-color:#ffd600;color:#ffd600;}.tbtn[data-t="tension"].on{background:#ffd600;color:#000;box-shadow:0 0 12px rgba(255,214,0,.4);}
-.tbtn[data-t="naval"]{border-color:#00e5ff;color:#00e5ff;}.tbtn[data-t="naval"].on{background:#00e5ff;color:#000;box-shadow:0 0 12px rgba(0,229,255,.4);}
-.tbtn[data-t="air"]{border-color:#b44fff;color:#b44fff;}.tbtn[data-t="air"].on{background:#b44fff;color:#000;box-shadow:0 0 12px rgba(180,79,255,.4);}
-.tbtn[data-t="cyber"]{border-color:#00ff87;color:#00ff87;}.tbtn[data-t="cyber"].on{background:#00ff87;color:#000;box-shadow:0 0 12px rgba(0,255,135,.4);}
-.tbtn[data-t="nuclear"]{border-color:#ff9100;color:#ff9100;}.tbtn[data-t="nuclear"].on{background:#ff9100;color:#000;box-shadow:0 0 12px rgba(255,145,0,.4);}
-#mapbox{flex:1;position:relative;min-height:0;}
-#map{width:100%;height:100%;}
-.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.7) saturate(.6) contrast(1.1);}
-.leaflet-control-attribution{display:none;}
-.leaflet-control-zoom a{background:var(--card) !important;color:var(--acc) !important;border-color:var(--bb) !important;}
-.leaflet-popup-content-wrapper{background:#0d1117 !important;border:1px solid #2a4060 !important;border-radius:3px !important;color:#e8f0f8 !important;box-shadow:0 0 24px rgba(0,0,0,.95) !important;font-family:'Barlow',sans-serif !important;}
-.leaflet-popup-tip{background:#0d1117 !important;}
-.leaflet-popup-content{margin:10px 12px !important;font-size:12px !important;min-width:270px;}
-.leaflet-popup-close-button{color:#7a9ab8 !important;font-size:18px !important;top:4px !important;right:6px !important;}
-.pt{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;margin-bottom:4px;}
-.ptag{display:inline-block;padding:1px 7px;border-radius:2px;font-size:10px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;margin-bottom:6px;}
-.pdesc{color:#7a9ab8;line-height:1.5;font-size:11px;margin-bottom:8px;}
-.pkpis{display:flex;gap:5px;margin-bottom:8px;}
-.pkpi{flex:1;background:#111820;border:1px solid #1e2d3d;border-radius:2px;padding:5px 2px;text-align:center;}
-.pkpiv{font-family:'Share Tech Mono',monospace;font-size:13px;font-weight:700;}
-.pkpil{font-family:'Barlow Condensed',sans-serif;font-size:8px;color:#3d5470;letter-spacing:1px;text-transform:uppercase;}
-.psec{margin-bottom:6px;}
-.psecl{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#3d5470;margin-bottom:4px;}
-.plinks{display:flex;flex-wrap:wrap;gap:3px;}
-.plink{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px;text-decoration:none;border:1px solid;transition:filter .15s;}
-.plink:hover{filter:brightness(1.5);}
-.pxlink{font-family:'Share Tech Mono',monospace;font-size:10px;padding:2px 8px;border-radius:10px;text-decoration:none;color:#1d9bf0;border:1px solid #1d9bf050;background:#1d9bf010;transition:all .15s;}
-.pxlink:hover{background:#1d9bf025;}
-#mapleg{position:absolute;bottom:12px;right:10px;background:rgba(13,17,23,.92);border:1px solid var(--bb);border-radius:3px;padding:8px 12px;z-index:1000;pointer-events:none;}
-.legl{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:6px;}
-.legr{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
-.legd{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.legn{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--t2);}
+/* Map layer toggle bar */
+#layer-bar {
+  position:absolute; top:10px; left:10px; right:10px; z-index:1000;
+  display:flex; gap:6px; flex-wrap:wrap; align-items:center;
+}
+.layer-btn {
+  font-family:var(--cond); font-size:11px; font-weight:700; letter-spacing:.5px;
+  padding:4px 10px; border-radius:2px; cursor:pointer; border:1px solid; transition:all .15s;
+  background:rgba(7,9,13,.85); backdrop-filter:blur(4px); text-transform:uppercase;
+  display:flex; align-items:center; gap:5px;
+}
+.layer-btn .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.layer-btn[data-l="guerra"]  { border-color:#f0334a50; color:#f0334a; }  .layer-btn[data-l="guerra"].on  { background:#f0334a; color:#000; }
+.layer-btn[data-l="crisis"]  { border-color:#f0733050; color:#f07330; } .layer-btn[data-l="crisis"].on  { background:#f07330; color:#000; }
+.layer-btn[data-l="tension"] { border-color:#f0c33050; color:#f0c330; }.layer-btn[data-l="tension"].on { background:#f0c330; color:#000; }
+.layer-btn[data-l="naval"]   { border-color:#00d4ff50; color:#00d4ff; } .layer-btn[data-l="naval"].on   { background:#00d4ff; color:#000; }
+.layer-btn[data-l="nuclear"] { border-color:#f0733050; color:#ff9100; }.layer-btn[data-l="nuclear"].on { background:#ff9100; color:#000; }
+.layer-btn[data-l="cyber"]   { border-color:#30f09050; color:#30f090; }.layer-btn[data-l="cyber"].on   { background:#30f090; color:#000; }
+.layer-btn[data-l="aéreo"]   { border-color:#9b5de550; color:#9b5de5; }.layer-btn[data-l="aéreo"].on   { background:#9b5de5; color:#fff; }
 
-/* ═══ RIGHT PANEL ═══ */
-#right{border-left:1px solid var(--b);border-right:none;overflow:hidden;display:flex;flex-direction:column;min-height:0;}
-#evlist{flex:1;overflow-y:auto;}
-.ev{padding:8px 12px;border-bottom:1px solid var(--b);cursor:pointer;transition:background .1s;}
-.ev:hover{background:var(--card);}
-.evr1{display:flex;align-items:center;gap:5px;margin-bottom:2px;}
-.evtag{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:1px 5px;border-radius:1px;}
-.evreg{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--t2);flex:1;}
-.evint{font-family:'Share Tech Mono',monospace;font-size:11px;font-weight:700;}
-.evtit{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;line-height:1.3;margin-bottom:2px;}
-.evdesc{font-size:10px;color:var(--t2);line-height:1.4;margin-bottom:3px;}
-.evkpis{display:flex;gap:4px;margin-bottom:3px;}
-.evkpi{flex:1;background:var(--card2);border:1px solid var(--b);border-radius:2px;padding:2px 4px;text-align:center;}
-.evkpiv{font-family:'Share Tech Mono',monospace;font-size:11px;font-weight:700;}
-.evkpil{font-family:'Barlow Condensed',sans-serif;font-size:8px;letter-spacing:1px;color:var(--t3);text-transform:uppercase;}
-.evlinks{display:flex;flex-wrap:wrap;gap:3px;}
-.evlink{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;padding:1px 6px;border-radius:2px;text-decoration:none;border:1px solid;transition:filter .15s;}
-.evlink:hover{filter:brightness(1.5);}
-#intpane{padding:9px 12px;border-top:1px solid var(--b);background:var(--card);flex-shrink:0;}
-.intlbl{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:7px;}
-.intr{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
-.intn{font-family:'Barlow Condensed',sans-serif;font-size:11px;width:108px;color:var(--t2);flex-shrink:0;}
-.intbg{flex:1;height:4px;background:var(--b);border-radius:2px;overflow:hidden;}
-.intb{height:100%;border-radius:2px;transition:width 1.2s;}
-.intv{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--t3);width:22px;text-align:right;}
+/* Popup */
+.leaflet-popup-content-wrapper { background:rgba(12,15,22,.97)!important; border:1px solid var(--border2)!important; border-radius:3px!important; color:var(--t1)!important; box-shadow:0 8px 40px rgba(0,0,0,.9)!important; backdrop-filter:blur(8px); }
+.leaflet-popup-tip { background:#0c0f16!important; }
+.leaflet-popup-content { margin:12px 14px!important; min-width:280px; font-family:var(--sans)!important; }
+.leaflet-popup-close-button { color:var(--t2)!important; font-size:18px!important; }
+.pu-title { font-family:var(--cond); font-size:18px; font-weight:700; margin-bottom:3px; }
+.pu-tag { display:inline-block; font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:2px; padding:1px 7px; border-radius:1px; margin-bottom:7px; }
+.pu-desc { font-size:11px; color:var(--t2); line-height:1.55; margin-bottom:10px; }
+.pu-kpis { display:flex; gap:5px; margin-bottom:10px; }
+.pu-kpi { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:2px; padding:5px 4px; text-align:center; }
+.pu-kv { font-family:var(--mono); font-size:14px; font-weight:600; }
+.pu-kl { font-family:var(--cond); font-size:8px; letter-spacing:1px; color:var(--t3); text-transform:uppercase; }
+.pu-section-label { font-family:var(--mono); font-size:8px; letter-spacing:2px; color:var(--t3); text-transform:uppercase; margin-bottom:5px; }
+.pu-links { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px; }
+.pu-link { font-family:var(--cond); font-size:10px; font-weight:600; padding:2px 8px; border-radius:2px; text-decoration:none; border:1px solid; transition:filter .15s; }
+.pu-link:hover { filter:brightness(1.5); }
+.pu-xlink { font-family:var(--mono); font-size:10px; padding:2px 8px; border-radius:10px; text-decoration:none; color:#1d9bf0; border:1px solid #1d9bf040; background:#1d9bf010; transition:all .15s; }
+.pu-xlink:hover { background:#1d9bf025; }
 
-/* TICKER */
-#ticker{height:27px;background:rgba(8,11,15,.97);border-top:1px solid var(--bb);display:flex;align-items:center;overflow:hidden;flex-shrink:0;z-index:200;}
-#tklbl{padding:0 12px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:900;letter-spacing:3px;color:#000;background:var(--red);height:100%;display:flex;align-items:center;flex-shrink:0;box-shadow:4px 0 12px rgba(255,61,87,.3);}
-#tktrack{flex:1;overflow:hidden;position:relative;height:100%;}
-#tkinner{position:absolute;white-space:nowrap;display:flex;align-items:center;height:100%;animation:scroll 120s linear infinite;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--t2);}
-@keyframes scroll{0%{transform:translateX(100vw)}100%{transform:translateX(-100%)}}
-.tki{margin-right:50px;cursor:pointer;}.tki:hover{color:var(--acc);}
-.tks{color:var(--red);margin-right:50px;}
-::-webkit-scrollbar{width:4px;}
-::-webkit-scrollbar-track{background:var(--bg);}
-::-webkit-scrollbar-thumb{background:var(--bb);border-radius:2px;}
+/* ═══════════════════════════════════════════
+   LEFT PANEL
+═══════════════════════════════════════════ */
+.panel-hdr {
+  flex-shrink:0; padding:8px 12px; border-bottom:1px solid var(--border);
+  font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:3px;
+  text-transform:uppercase; color:var(--t3); display:flex; align-items:center; gap:8px;
+}
+.panel-hdr .acc { color:var(--acc); }
+
+/* YouTube section */
+#yt-section { flex-shrink:0; border-bottom:2px solid var(--border2); }
+#yt-tabs { display:flex; background:var(--bg); border-bottom:1px solid var(--border); }
+.yt-tab { flex:1; padding:5px 2px; text-align:center; font-family:var(--cond); font-size:10px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; cursor:pointer; color:var(--t3); border:none; background:transparent; border-bottom:2px solid transparent; transition:all .15s; }
+.yt-tab.on { color:var(--red); border-bottom-color:var(--red); background:rgba(240,51,74,.05); }
+#yt-frame-wrap { height:154px; background:#000; position:relative; }
+#yt-frame-wrap iframe { width:100%; height:154px; border:none; display:block; }
+.live-badge { position:absolute; top:6px; left:6px; background:var(--red); color:#fff; font-family:var(--cond); font-size:9px; font-weight:900; letter-spacing:2px; padding:2px 6px; border-radius:1px; pointer-events:none; animation:pulse 1.5s infinite; z-index:5; }
+/* YouTube fallback — shows when iframe errors */
+#yt-fallback { display:none; width:100%; height:154px; background:#000; align-items:center; justify-content:center; flex-direction:column; gap:8px; }
+#yt-fallback.show { display:flex; }
+#yt-frame-wrap.error iframe { display:none; }
+#yt-frame-wrap.error #yt-fallback { display:flex; }
+.yt-fb-btn { font-family:var(--cond); font-size:12px; font-weight:700; color:var(--red); border:1px solid var(--red); padding:6px 16px; border-radius:2px; text-decoration:none; letter-spacing:1px; transition:all .15s; }
+.yt-fb-btn:hover { background:var(--red); color:#000; }
+.yt-fb-label { font-family:var(--mono); font-size:9px; color:var(--t3); }
+
+/* Conflict accordion */
+#conflicts-section { flex:1; overflow-y:auto; }
+.conflict-group { border-bottom:1px solid var(--border); }
+.cg-header { display:flex; align-items:center; gap:8px; padding:8px 12px; cursor:pointer; transition:background .12s; user-select:none; }
+.cg-header:hover { background:var(--surface2); }
+.cg-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; animation:pulse 3s ease-in-out infinite; }
+.cg-name { font-family:var(--cond); font-size:13px; font-weight:700; flex:1; }
+.cg-tag { font-family:var(--mono); font-size:8px; font-weight:600; letter-spacing:1px; padding:1px 5px; border-radius:1px; }
+.cg-int { font-family:var(--mono); font-size:11px; font-weight:600; }
+.cg-chevron { font-size:9px; color:var(--t3); transition:transform .2s; }
+.cg-header.open .cg-chevron { transform:rotate(180deg); }
+
+.cg-body { display:none; padding:0 12px 10px; }
+.cg-body.open { display:block; }
+
+/* KPIs inside group */
+.cg-kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-bottom:8px; margin-top:6px; }
+.cg-kpi { background:var(--surface2); border:1px solid var(--border); border-radius:2px; padding:4px; text-align:center; }
+.cg-kv { font-family:var(--mono); font-size:12px; font-weight:600; }
+.cg-kl { font-family:var(--cond); font-size:8px; letter-spacing:1px; text-transform:uppercase; color:var(--t3); }
+
+/* Sub-tabs: FUENTES / X / NOTICIAS */
+.cg-tabs { display:flex; gap:0; border:1px solid var(--border); border-radius:2px; margin-bottom:7px; overflow:hidden; }
+.cg-tab { flex:1; padding:3px 0; text-align:center; font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:1px; text-transform:uppercase; cursor:pointer; color:var(--t3); background:transparent; border:none; transition:all .15s; border-right:1px solid var(--border); }
+.cg-tab:last-child { border-right:none; }
+.cg-tab.on { color:var(--acc); background:rgba(0,212,255,.08); }
+
+.cg-content { min-height:60px; }
+
+/* Source links */
+.src-links { display:flex; flex-wrap:wrap; gap:3px; }
+.src-link { font-family:var(--cond); font-size:10px; font-weight:600; padding:2px 7px; border-radius:2px; text-decoration:none; border:1px solid; transition:filter .15s; }
+.src-link:hover { filter:brightness(1.5); }
+
+/* X feed */
+.x-feed { display:flex; flex-direction:column; gap:4px; }
+.x-item { background:var(--surface2); border:1px solid var(--border); border-radius:2px; padding:6px 8px; }
+.x-item-top { display:flex; align-items:center; gap:5px; margin-bottom:3px; }
+.x-handle { font-family:var(--mono); font-size:9px; color:#1d9bf0; font-weight:600; text-decoration:none; }
+.x-handle:hover { text-decoration:underline; }
+.x-time { font-family:var(--mono); font-size:8px; color:var(--t3); margin-left:auto; }
+.x-text { font-size:10px; color:var(--t1); line-height:1.45; }
+.x-link { font-family:var(--mono); font-size:9px; color:var(--acc); text-decoration:none; display:inline-block; margin-top:3px; }
+.x-loading { font-family:var(--mono); font-size:9px; color:var(--t3); padding:8px 0; text-align:center; }
+
+/* News feed inside conflict */
+.news-feed { display:flex; flex-direction:column; gap:4px; }
+.news-item { background:var(--surface2); border:1px solid var(--border); border-left:2px solid; border-radius:2px; padding:5px 7px; cursor:pointer; transition:background .12s; text-decoration:none; display:block; }
+.news-item:hover { background:var(--surface3); }
+.news-item-title { font-size:10px; color:var(--t1); line-height:1.4; margin-bottom:2px; }
+.news-item-meta { font-family:var(--mono); font-size:8px; color:var(--t3); }
+
+/* ═══════════════════════════════════════════
+   RIGHT PANEL — FEED EN VIVO
+═══════════════════════════════════════════ */
+#right-tabs { flex-shrink:0; display:flex; border-bottom:2px solid var(--border2); }
+.right-tab { flex:1; padding:9px 0; text-align:center; font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:2px; text-transform:uppercase; cursor:pointer; color:var(--t3); background:transparent; border:none; border-bottom:2px solid transparent; transition:all .15s; }
+.right-tab.on { color:var(--acc); border-bottom-color:var(--acc); background:rgba(0,212,255,.04); }
+
+#right-content { flex:1; overflow-y:auto; }
+
+.right-pane { display:none; }
+.right-pane.on { display:block; }
+
+/* Breaking news feed */
+.feed-item { padding:10px 12px; border-bottom:1px solid var(--border); transition:background .1s; }
+.feed-item:hover { background:var(--surface2); }
+.fi-row1 { display:flex; align-items:center; gap:6px; margin-bottom:3px; }
+.fi-tag { font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:1px; padding:1px 5px; border-radius:1px; }
+.fi-region { font-family:var(--cond); font-size:11px; color:var(--t2); flex:1; }
+.fi-time { font-family:var(--mono); font-size:9px; color:var(--t3); }
+.fi-title { font-family:var(--cond); font-size:14px; font-weight:600; line-height:1.3; margin-bottom:3px; cursor:pointer; text-decoration:none; color:var(--t1); display:block; }
+.fi-title:hover { color:var(--acc); }
+.fi-desc { font-size:10px; color:var(--t2); line-height:1.45; margin-bottom:5px; }
+.fi-kpis { display:flex; gap:4px; margin-bottom:5px; }
+.fi-kpi { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:2px; padding:3px; text-align:center; }
+.fi-kv { font-family:var(--mono); font-size:11px; font-weight:600; }
+.fi-kl { font-family:var(--cond); font-size:8px; letter-spacing:1px; color:var(--t3); text-transform:uppercase; }
+.fi-links { display:flex; flex-wrap:wrap; gap:3px; }
+.fi-link { font-family:var(--cond); font-size:9px; font-weight:600; padding:1px 6px; border-radius:2px; text-decoration:none; border:1px solid; transition:filter .15s; }
+.fi-link:hover { filter:brightness(1.5); }
+.fi-xlink { font-family:var(--mono); font-size:9px; padding:1px 7px; border-radius:8px; text-decoration:none; color:#1d9bf0; border:1px solid #1d9bf030; background:#1d9bf010; transition:all .15s; }
+.fi-xlink:hover { background:#1d9bf020; }
+
+/* Region intensity panel */
+#intensity-panel { flex-shrink:0; padding:10px 12px; border-top:1px solid var(--border2); background:var(--surface2); }
+.int-hdr { font-family:var(--mono); font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--t3); margin-bottom:8px; }
+.int-row { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+.int-name { font-family:var(--cond); font-size:11px; color:var(--t2); width:105px; flex-shrink:0; }
+.int-bg { flex:1; height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+.int-bar { height:100%; border-radius:2px; transition:width 1.4s cubic-bezier(.4,0,.2,1); width:0; }
+.int-val { font-family:var(--mono); font-size:9px; color:var(--t3); width:22px; text-align:right; }
+
+/* ═══════════════════════════════════════════
+   TICKER
+═══════════════════════════════════════════ */
+#ticker-bar {
+  height:28px; background:rgba(7,9,13,.98); border-top:1px solid var(--border2);
+  display:flex; align-items:center; overflow:hidden;
+}
+#ticker-label { padding:0 12px; height:100%; display:flex; align-items:center; font-family:var(--cond); font-size:11px; font-weight:900; letter-spacing:3px; color:#000; background:var(--red); box-shadow:6px 0 15px rgba(240,51,74,.4); flex-shrink:0; }
+#ticker-track { flex:1; overflow:hidden; position:relative; height:100%; }
+#ticker-inner { position:absolute; white-space:nowrap; display:flex; align-items:center; height:100%; animation:tickerMove 100s linear infinite; font-family:var(--mono); font-size:10px; color:var(--t2); }
+@keyframes tickerMove { 0%{transform:translateX(100vw)} 100%{transform:translateX(-100%)} }
+.t-item { margin-right:60px; cursor:pointer; transition:color .15s; }
+.t-item:hover { color:var(--acc); }
+.t-sep { color:var(--red); margin-right:60px; font-size:8px; }
+
+/* scrollbars */
+::-webkit-scrollbar { width:3px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+
+/* animate animations */
+@keyframes slideIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+.feed-item { animation:slideIn .3s ease both; }
 </style>
 </head>
 <body>
-<div id="wrap">
+<div id="app">
 
-<!-- TOP BAR -->
-<div id="top">
-  <div id="logo">SALA<small>Siguiendo Atentamente Los Acontecimientos</small></div>
-  <div id="sbar">
-    <span class="sdot r"></span><span style="color:var(--red);font-size:10px;letter-spacing:1px;">LIVE</span>
-    <span style="color:var(--t3)">|</span>
-    <span class="sdot g"></span><span style="color:var(--t3);font-size:10px;">FEEDS OK</span>
-    <span style="color:var(--t3)">|</span>
-    <span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--red);">⬤ 18 ACTIVOS</span>
+<!-- ═══ TOPBAR ═══ -->
+<div id="topbar">
+  <div id="logo-area">
+    <span id="logo">SALA</span>
+    <span id="logo-sub">Siguiendo Atentamente Los Acontecimientos</span>
   </div>
-  <a id="bylink" href="https://www.fedeandino.com" target="_blank" rel="noopener">✦ fedeandino.com</a>
-  <div id="clock">--:--:-- UTC</div>
+  <div class="top-sep"></div>
+  <div class="status-pill"><span class="pulse r"></span> LIVE</div>
+  <div class="top-sep"></div>
+  <div class="status-pill"><span class="pulse g"></span> FEEDS OK</div>
+  <div class="top-sep"></div>
+  <div class="status-pill" style="color:var(--red)">⬤ 18 ACTIVOS</div>
+
+  <div id="top-kpis">
+    <div class="tkpi"><div class="tkpi-val" style="color:var(--red)">18</div><div class="tkpi-label">Conflictos</div></div>
+    <div class="tkpi"><div class="tkpi-val" style="color:var(--yel)">47</div><div class="tkpi-label">Países</div></div>
+    <div class="tkpi"><div class="tkpi-val" style="color:var(--grn)" id="alcnt">14</div><div class="tkpi-label">Alertas</div></div>
+    <div class="tkpi"><div class="tkpi-val" style="color:var(--acc)">892</div><div class="tkpi-label">Buques Desv.</div></div>
+  </div>
+
+  <div id="clock">--:--:--</div>
+  <a id="by-link" href="https://www.fedeandino.com" target="_blank" rel="noopener">fedeandino.com ↗</a>
 </div>
 
-<!-- KPI BAR -->
-<div id="kpibar">
-  <div id="tmeter">
-    <div id="tlab"><span>// ÍNDICE DE TENSIÓN GLOBAL</span><span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--ora);">78 / 100</span></div>
-    <div id="ttrack"><div id="tfill"></div><div id="tneedle"></div></div>
+<!-- ═══ TENSION STRIP ═══ -->
+<div id="tension-strip">
+  <span id="tension-label">// ÍNDICE DE TENSIÓN GLOBAL</span>
+  <div id="tension-track">
+    <div id="tension-fill"></div>
+    <div id="tension-needle"></div>
   </div>
-  <div class="kitem"><div class="kval" style="color:var(--red)">23</div><div class="klab">Conflictos</div><div class="ksub" style="color:var(--red)">+2 mes</div></div>
-  <div class="kitem"><div class="kval" style="color:var(--yel)">47</div><div class="klab">Países Involuc.</div><div class="ksub" style="color:var(--yel)">▲+3 sem</div></div>
-  <div class="kitem"><div class="kval" style="color:var(--grn)" id="alcnt">14</div><div class="klab">Alertas Hoy</div><div class="ksub" style="color:var(--t3)">últimas 6h</div></div>
-  <div class="kitem"><div class="kval" style="color:var(--acc)">892</div><div class="klab">Buques Desv.</div><div class="ksub" style="color:var(--acc)">Mar Rojo YTD</div></div>
+  <span id="tension-val">78 / 100</span>
+  <span class="t-kpi" style="color:var(--red)">Europa <b>95</b></span>
+  <span class="t-kpi" style="color:var(--ora)">MENA <b>85</b></span>
+  <span class="t-kpi" style="color:var(--yel)">África <b>72</b></span>
+  <span class="t-kpi" style="color:var(--acc)">Asia-Pac <b>70</b></span>
 </div>
 
-<!-- MAIN -->
-<div id="main">
+<!-- ═══ MAIN BODY ═══ -->
+<div id="body">
 
-  <!-- LEFT PANEL -->
-  <div class="pane" id="left">
+  <!-- ══ LEFT PANEL ══ -->
+  <div id="left-panel">
 
-    <!-- LIVE VIDEO -->
-    <div id="livesec">
-      <div class="phdr"><span style="color:var(--red)">●</span> TRANSMISIÓN EN VIVO</div>
-      <div id="chanbtns"></div>
-      <div id="vwrap">
-        <div class="livebadge">● EN VIVO</div>
-        <iframe id="vframe" src="" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+    <!-- YouTube Live -->
+    <div id="yt-section">
+      <div class="panel-hdr"><span class="acc">▶</span> TRANSMISIÓN EN VIVO</div>
+      <div id="yt-tabs"></div>
+      <div id="yt-frame-wrap">
+        <div class="live-badge">● EN VIVO</div>
+        <iframe id="yt-iframe" src="" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"></iframe>
+        <div id="yt-fallback">
+          <div class="yt-fb-label">Stream no disponible en este momento</div>
+          <a id="yt-direct-btn" class="yt-fb-btn" href="" target="_blank" rel="noopener">▶ ABRIR EN YOUTUBE</a>
+        </div>
       </div>
-      <div id="livelink">Si no carga: <a id="vdirect" href="" target="_blank">abrir en YouTube ↗</a></div>
     </div>
 
-    <!-- BOTTOM HALF: X accounts + conflict cards -->
-    <div id="leftbottom">
-
-    <!-- X ACCOUNTS — ALWAYS VISIBLE, FIXED 160px -->
-    <div id="xblock">
-      <div id="xblock-hdr">
-        𝕏 CUENTAS OSINT EN X
-        <span>— click para abrir perfil</span>
-      </div>
-      <div id="xtabs"></div>
-      <div id="xaccounts"></div>
-    </div>
-
-    <!-- CONFLICT CARDS -->
-    <div id="cardshdr"><span style="color:var(--acc)">◈</span> CONFLICTOS POR ZONA — fuentes por conflicto</div>
-    <div id="cardsscroll"></div>
-
-    </div><!-- /leftbottom -->
+    <!-- Conflict Accordion -->
+    <div class="panel-hdr" style="border-top:2px solid var(--border2)"><span class="acc">◈</span> CONFLICTOS — FUENTES Y FEEDS</div>
+    <div id="conflicts-section"></div>
 
   </div>
 
-  <!-- CENTER MAP -->
-  <div id="center">
-    <div id="tagbar">
-      <span class="taglbl">FILTROS:</span>
-      <button class="tbtn on" data-t="war"     onclick="toggleTag(this)">⬤ GUERRA</button>
-      <button class="tbtn on" data-t="crisis"  onclick="toggleTag(this)">⬤ CRISIS</button>
-      <button class="tbtn on" data-t="tension" onclick="toggleTag(this)">⬤ TENSIÓN</button>
-      <button class="tbtn on" data-t="naval"   onclick="toggleTag(this)">◈ NAVAL</button>
-      <button class="tbtn on" data-t="air"     onclick="toggleTag(this)">◈ AÉREO</button>
-      <button class="tbtn on" data-t="cyber"   onclick="toggleTag(this)">◈ CYBER</button>
-      <button class="tbtn on" data-t="nuclear" onclick="toggleTag(this)">☢ NUCLEAR</button>
+  <!-- ══ MAP ══ -->
+  <div id="map-area">
+    <div id="map"></div>
+    <div id="layer-bar"></div>
+  </div>
+
+  <!-- ══ RIGHT PANEL ══ -->
+  <div id="right-panel">
+    <div id="right-tabs">
+      <button class="right-tab on" data-tab="situaciones" onclick="switchRightTab(this)">SITUACIONES</button>
+      <button class="right-tab" data-tab="noticias" onclick="switchRightTab(this)">NOTICIAS</button>
+      <button class="right-tab" data-tab="x-global" onclick="switchRightTab(this)">X GLOBAL</button>
     </div>
-    <div id="mapbox">
-      <div id="map"></div>
-      <div id="mapleg">
-        <div class="legl">// LEYENDA</div>
-        <div class="legr"><div class="legd" style="background:#ff3d57;box-shadow:0 0 6px #ff3d57"></div><span class="legn">GUERRA</span></div>
-        <div class="legr"><div class="legd" style="background:#ff7c1a;box-shadow:0 0 6px #ff7c1a"></div><span class="legn">CRISIS</span></div>
-        <div class="legr"><div class="legd" style="background:#ffd600;box-shadow:0 0 6px #ffd600"></div><span class="legn">TENSIÓN</span></div>
-        <div class="legr"><div class="legd" style="background:#00e5ff;box-shadow:0 0 6px #00e5ff;border-radius:2px"></div><span class="legn">NAVAL</span></div>
-        <div class="legr"><div class="legd" style="background:#b44fff;box-shadow:0 0 6px #b44fff;border-radius:2px"></div><span class="legn">AÉREO</span></div>
-        <div class="legr"><div class="legd" style="background:#00ff87;box-shadow:0 0 6px #00ff87;border-radius:2px"></div><span class="legn">CYBER</span></div>
-        <div class="legr"><div class="legd" style="background:#ff9100;box-shadow:0 0 6px #ff9100"></div><span class="legn">NUCLEAR</span></div>
-      </div>
+    <div id="right-content">
+      <div id="pane-situaciones" class="right-pane on"></div>
+      <div id="pane-noticias" class="right-pane"></div>
+      <div id="pane-x-global" class="right-pane"></div>
+    </div>
+    <div id="intensity-panel">
+      <div class="int-hdr">// TENSIÓN POR REGIÓN</div>
     </div>
   </div>
 
-  <!-- RIGHT PANEL -->
-  <div class="pane" id="right">
-    <div class="phdr"><span style="color:var(--acc)">◈</span> SITUACIONES ACTIVAS<span style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--t3)" id="evcnt"></span></div>
-    <div id="evlist"></div>
-    <div id="intpane"><div class="intlbl">// TENSIÓN POR REGIÓN</div></div>
-  </div>
+</div><!-- /body -->
 
-</div><!-- /main -->
-
-<!-- TICKER -->
-<div id="ticker">
-  <div id="tklbl">BREAKING</div>
-  <div id="tktrack"><div id="tkinner"></div></div>
+<!-- ═══ TICKER ═══ -->
+<div id="ticker-bar">
+  <div id="ticker-label">BREAKING</div>
+  <div id="ticker-track"><div id="ticker-inner"></div></div>
 </div>
 
-</div><!-- /wrap -->
+</div><!-- /app -->
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// ═══════════════════════════════════════════════
-// CHANNELS — YouTube 24/7 live stream video IDs
-// These are the permanent stream IDs (not channel IDs)
-// If a stream is down, the direct link still works
-// ═══════════════════════════════════════════════
-var CH = [
-  { n:'Al Jazeera', id:'F4mB3_mOf1k' },  // AJ English 24/7 live
-  { n:'France 24',  id:'l8tWpViTkGs' },  // France 24 EN
-  { n:'DW News',    id:'mSh1TaTQEts' },  // Deutsche Welle
-  { n:'Euronews',   id:'RHHXkRpuaHk' },  // Euronews English
-  { n:'Bloomberg',  id:'dp8PhLsUcFE' },  // Bloomberg Television
-];
+// ══════════════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════════════
 
-// ═══════════════════════════════════════════════
-// X ACCOUNTS grouped by topic
-// ═══════════════════════════════════════════════
-var XGROUPS = [
-  { label:'UCRANIA', accounts:[
-    {n:'@RALee85',       u:'https://x.com/RALee85'},
-    {n:'@UAWeapons',     u:'https://x.com/UAWeapons'},
-    {n:'@War_Mapper',    u:'https://x.com/War_Mapper'},
-    {n:'@oryxspioenkop', u:'https://x.com/oryxspioenkop'},
-    {n:'@GeoConfirmed',  u:'https://x.com/GeoConfirmed'},
-    {n:'@KofmanMichael', u:'https://x.com/KofmanMichael'},
-  ]},
-  { label:'MENA', accounts:[
-    {n:'@MiddleEastEye',  u:'https://x.com/MiddleEastEye'},
-    {n:'@HawzhinOzodi',   u:'https://x.com/HawzhinOzodi'},
-    {n:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-    {n:'@TankerTrackers', u:'https://x.com/TankerTrackers'},
-    {n:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
-  ]},
-  { label:'GLOBAL', accounts:[
-    {n:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-    {n:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
-    {n:'@Conflicts',      u:'https://x.com/Conflicts'},
-    {n:'@MT_Anderson',    u:'https://x.com/MT_Anderson'},
-    {n:'@CalibreObscura', u:'https://x.com/CalibreObscura'},
-    {n:'@Intelslava',     u:'https://x.com/intelslava'},
-  ]},
-  { label:'NAVAL', accounts:[
-    {n:'@TankerTrackers', u:'https://x.com/TankerTrackers'},
-    {n:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-  ]},
-  { label:'CYBER', accounts:[
-    {n:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-    {n:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
-    {n:'@GeoConfirmed',   u:'https://x.com/GeoConfirmed'},
-  ]},
-];
-
-// ═══════════════════════════════════════════════
-// TAG COLORS
-// ═══════════════════════════════════════════════
 var TC = {
-  war:    {f:'#ff3d57', g:'rgba(255,61,87,.5)',  b:'#2a0009'},
-  crisis: {f:'#ff7c1a', g:'rgba(255,124,26,.5)', b:'#2a1400'},
-  tension:{f:'#ffd600', g:'rgba(255,214,0,.5)',  b:'#2a2400'},
-  naval:  {f:'#00e5ff', g:'rgba(0,229,255,.5)',  b:'#002a30'},
-  air:    {f:'#b44fff', g:'rgba(180,79,255,.5)', b:'#1a0a2a'},
-  cyber:  {f:'#00ff87', g:'rgba(0,255,135,.5)',  b:'#002a14'},
-  nuclear:{f:'#ff9100', g:'rgba(255,145,0,.5)',  b:'#2a1900'},
+  guerra:  { f:'#f0334a', g:'rgba(240,51,74,.45)',  b:'#2a0009' },
+  crisis:  { f:'#f07330', g:'rgba(240,115,48,.45)', b:'#2a1200' },
+  tension: { f:'#f0c330', g:'rgba(240,195,48,.45)', b:'#2a2000' },
+  naval:   { f:'#00d4ff', g:'rgba(0,212,255,.45)',  b:'#002530' },
+  nuclear: { f:'#ff9100', g:'rgba(255,145,0,.45)',  b:'#2a1800' },
+  cyber:   { f:'#30f090', g:'rgba(48,240,144,.45)', b:'#002515' },
+  aéreo:   { f:'#9b5de5', g:'rgba(155,93,229,.45)', b:'#180a2a' },
 };
 
-// ═══════════════════════════════════════════════
-// CONFLICTS
-// ═══════════════════════════════════════════════
-var CF = [
-  { id:1,  title:'Guerra Rusia-Ucrania',         region:'Europa del Este',   lat:49.0, lng:32.0,  tag:'war',     int:95, alertas:8, paises:50,
-    desc:'Conflicto armado activo. Frentes en Kursk, Zaporiyia y Donetsk. +620K bajas estimadas.',
-    links:[{l:'ISW Daily',u:'https://understandingwar.org',c:'#7c4dff'},{l:'DeepStateMap',u:'https://deepstatemap.live',c:'#00b4d8'},{l:'Kyiv Indep.',u:'https://kyivindependent.com',c:'#00e5ff'},{l:'LiveUAMap',u:'https://liveuamap.com',c:'#ff3d57'},{l:'Oryx Losses',u:'https://www.oryxspioenkop.com',c:'#4caf50'},{l:'Sentinel Hub',u:'https://apps.sentinel-hub.com/eo-browser/',c:'#b44fff'}],
-    xl:[{n:'@RALee85',u:'https://x.com/RALee85'},{n:'@UAWeapons',u:'https://x.com/UAWeapons'},{n:'@War_Mapper',u:'https://x.com/War_Mapper'},{n:'@oryxspioenkop',u:'https://x.com/oryxspioenkop'},{n:'@GeoConfirmed',u:'https://x.com/GeoConfirmed'}]},
-  { id:2,  title:'Conflicto Gaza / Hamás',        region:'Oriente Medio',    lat:31.5, lng:34.4,  tag:'war',     int:90, alertas:6, paises:6,
-    desc:'Operaciones israelíes en Gaza. Crisis humanitaria severa. +47K bajas estimadas.',
-    links:[{l:'Middle East Eye',u:'https://www.middleeasteye.net',c:'#09c'},{l:'Al Jazeera',u:'https://www.aljazeera.com/tag/israel-palestine-conflict/',c:'#c4a029'},{l:'OCHA',u:'https://www.unocha.org/occupied-palestinian-territory',c:'#00b4d8'},{l:'ACLED Gaza',u:'https://acleddata.com/israel-palestine-crisis/',c:'#ff4081'},{l:'Bellingcat',u:'https://www.bellingcat.com',c:'#00e5ff'},{l:'Sentinel Hub',u:'https://apps.sentinel-hub.com/eo-browser/',c:'#b44fff'}],
-    xl:[{n:'@IntelCrab',u:'https://x.com/IntelCrab'},{n:'@OSINTdefender',u:'https://x.com/OSINTdefender'},{n:'@MiddleEastEye',u:'https://x.com/MiddleEastEye'},{n:'@HawzhinOzodi',u:'https://x.com/HawzhinOzodi'},{n:'@KofmanMichael',u:'https://x.com/KofmanMichael'}]},
-  { id:3,  title:'Tensión Irán – Israel',         region:'Oriente Medio',    lat:32.0, lng:35.5,  tag:'tension', int:82, alertas:4, paises:6,
-    desc:'Intercambio de ataques directos. Programa nuclear iraní supera 83.7% enriquecimiento.',
-    links:[{l:'Middle East Eye',u:'https://www.middleeasteye.net',c:'#09c'},{l:'AIEA/IAEA',u:'https://www.iaea.org',c:'#7c4dff'},{l:'Reuters MENA',u:'https://www.reuters.com/world/middle-east/',c:'#f60'},{l:'FlightRadar24',u:'https://www.flightradar24.com',c:'#f60'}],
-    xl:[{n:'@KofmanMichael',u:'https://x.com/KofmanMichael'},{n:'@IntelCrab',u:'https://x.com/IntelCrab'},{n:'@MiddleEastEye',u:'https://x.com/MiddleEastEye'}]},
-  { id:4,  title:'Mar Rojo – Ataques Houthi',     region:'Oriente Medio',    lat:14.0, lng:42.5,  tag:'naval',   int:80, alertas:5, paises:8,
-    desc:'Ataques con misiles y drones. 892 buques desviados del Canal de Suez en 2025.',
-    links:[{l:'MarineTraffic',u:'https://www.marinetraffic.com',c:'#00b4d8'},{l:'VesselFinder',u:'https://www.vesselfinder.com',c:'#0077b6'},{l:'GlobalFishWatch',u:'https://globalfishingwatch.org/map',c:'#4caf50'},{l:'ADS-B Exch.',u:'https://www.adsbexchange.com',c:'#7c4dff'},{l:'The War Zone',u:'https://www.thedrive.com/the-war-zone',c:'#ff6b35'}],
-    xl:[{n:'@TankerTrackers',u:'https://x.com/TankerTrackers'},{n:'@IntelCrab',u:'https://x.com/IntelCrab'},{n:'@OSINTdefender',u:'https://x.com/OSINTdefender'}]},
-  { id:5,  title:'Conflicto Sudán Civil',         region:'África del Norte', lat:15.5, lng:32.5,  tag:'war',     int:85, alertas:4, paises:2,
-    desc:'SAF vs RSF. +150K muertos. 10.8M desplazados. Crisis humanitaria masiva.',
-    links:[{l:'ACLED Sudán',u:'https://acleddata.com/sudan-crisis/',c:'#ff4081'},{l:'OCHA Sudán',u:'https://www.unocha.org/sudan',c:'#00b4d8'},{l:'Al Jazeera',u:'https://www.aljazeera.com/tag/sudan/',c:'#c4a029'},{l:'Sentinel Hub',u:'https://apps.sentinel-hub.com/eo-browser/',c:'#b44fff'}],
-    xl:[{n:'@OSINTdefender',u:'https://x.com/OSINTdefender'},{n:'@IntelCrab',u:'https://x.com/IntelCrab'},{n:'@Conflicts',u:'https://x.com/Conflicts'}]},
-  { id:6,  title:'Sahel – Operaciones Yihadistas',region:'África Occidental',lat:14.0, lng:2.0,   tag:'crisis',  int:72, alertas:3, paises:5,
-    desc:'JNIM e ISGS activos en Mali, Burkina Faso y Níger.',
-    links:[{l:'ACLED Sahel',u:'https://acleddata.com/africa/',c:'#ff4081'},{l:'Al Jazeera Afr.',u:'https://www.aljazeera.com/africa/',c:'#c4a029'},{l:'ISW',u:'https://understandingwar.org',c:'#7c4dff'},{l:'CFR Tracker',u:'https://www.cfr.org/global-conflict-tracker',c:'#9c27b0'}],
-    xl:[{n:'@OSINTdefender',u:'https://x.com/OSINTdefender'},{n:'@Conflicts',u:'https://x.com/Conflicts'}]},
-  { id:7,  title:'Tensión Taiwán-China',          region:'Asia-Pacífico',    lat:23.5, lng:121.0, tag:'tension', int:78, alertas:3, paises:4,
-    desc:'Maniobras militares chinas en el estrecho. Incursiones en ADIZ.',
-    links:[{l:'FlightRadar24',u:'https://www.flightradar24.com',c:'#f60'},{l:'ADS-B Exch.',u:'https://www.adsbexchange.com',c:'#7c4dff'},{l:'MarineTraffic',u:'https://www.marinetraffic.com',c:'#00b4d8'},{l:'CFR Taiwán',u:'https://www.cfr.org/global-conflict-tracker/conflict/taiwan-strait',c:'#7c4dff'},{l:'N2YO Sat.',u:'https://www.n2yo.com',c:'#ffd600'}],
-    xl:[{n:'@IntelCrab',u:'https://x.com/IntelCrab'},{n:'@MT_Anderson',u:'https://x.com/MT_Anderson'}]},
-  { id:8,  title:'Corea del Norte – ICBM',        region:'Asia-Pacífico',    lat:40.0, lng:127.0, tag:'nuclear', int:65, alertas:2, paises:5,
-    desc:'Pruebas de ICBM Hwasong-18. Tropas DPRK en Ucrania. Cooperación con Rusia.',
-    links:[{l:'38 North',u:'https://www.38north.org',c:'#ff9100'},{l:'ADS-B Exch.',u:'https://www.adsbexchange.com',c:'#7c4dff'},{l:'N2YO Sat.',u:'https://www.n2yo.com',c:'#ffd600'},{l:'The War Zone',u:'https://www.thedrive.com/the-war-zone',c:'#ff6b35'}],
-    xl:[{n:'@IntelCrab',u:'https://x.com/IntelCrab'},{n:'@MT_Anderson',u:'https://x.com/MT_Anderson'}]},
-  { id:9,  title:'Ciberguerra Global',            region:'Global',           lat:55.7, lng:37.6,  tag:'cyber',   int:77, alertas:5, paises:30,
-    desc:'APT28/Sandworm activos. Ataques a infraestructura crítica en Europa y EE.UU.',
-    links:[{l:'CISA Alerts',u:'https://www.cisa.gov/news-events/cybersecurity-advisories',c:'#4caf50'},{l:'Recorded Future',u:'https://www.recordedfuture.com',c:'#4caf50'},{l:'Mandiant',u:'https://www.mandiant.com/resources/blog',c:'#b44fff'},{l:'AlienVault',u:'https://otx.alienvault.com',c:'#00ff87'},{l:'GreyNoise',u:'https://www.greynoise.io',c:'#9c27b0'}],
-    xl:[{n:'@IntelCrab',u:'https://x.com/IntelCrab'},{n:'@OSINTdefender',u:'https://x.com/OSINTdefender'}]},
-  { id:10, title:'Haití – Crisis Pandillas',      region:'Caribe',           lat:18.9, lng:-72.3, tag:'crisis',  int:75, alertas:3, paises:1,
-    desc:'Pandillas controlan 80% de Puerto Príncipe. Misión CARICOM/Kenia desplegada.',
-    links:[{l:'OCHA Haití',u:'https://www.unocha.org/haiti',c:'#00b4d8'},{l:'ACLED Haití',u:'https://acleddata.com/haiti/',c:'#ff4081'},{l:'Reuters',u:'https://www.reuters.com/world/americas/haiti/',c:'#f60'}],
-    xl:[{n:'@OSINTdefender',u:'https://x.com/OSINTdefender'},{n:'@IntelCrab',u:'https://x.com/IntelCrab'}]},
-  { id:11, title:'Mar del Sur de China',          region:'Asia-Pacífico',    lat:12.0, lng:114.0, tag:'tension', int:68, alertas:2, paises:6,
-    desc:'Incidentes guardacostas chinos y filipinos. Islas artificiales en construcción.',
-    links:[{l:'MarineTraffic',u:'https://www.marinetraffic.com',c:'#00b4d8'},{l:'FlightRadar24',u:'https://www.flightradar24.com',c:'#f60'},{l:'CSIS Asia',u:'https://www.csis.org/programs/china-power-project',c:'#7c4dff'}],
-    xl:[{n:'@IntelCrab',u:'https://x.com/IntelCrab'}]},
-  { id:12, title:'Somalia – Al-Shabaab',          region:'África del Este',  lat:5.1,  lng:46.2,  tag:'crisis',  int:65, alertas:2, paises:4,
-    desc:'Ataques continuos de Al-Shabaab. ATMIS retirándose. 3.8M desplazados.',
-    links:[{l:'ACLED Somalia',u:'https://acleddata.com/somalia/',c:'#ff4081'},{l:'OCHA Somalia',u:'https://www.unocha.org/somalia',c:'#00b4d8'},{l:'ISW',u:'https://understandingwar.org',c:'#7c4dff'}],
-    xl:[{n:'@OSINTdefender',u:'https://x.com/OSINTdefender'},{n:'@Conflicts',u:'https://x.com/Conflicts'}]},
+// YouTube channels with multiple fallback IDs
+var YT_CHANNELS = [
+  { n:'Al Jazeera', ids:['F4mB3_mOf1k','nGTSqAeKMO4','XWq5kBlakcQ'], direct:'https://www.youtube.com/@AlJazeeraEnglish/live' },
+  { n:'France 24',  ids:['l8tWpViTkGs','fmZaaknL4gw'], direct:'https://www.youtube.com/@FRANCE24/live' },
+  { n:'DW News',    ids:['mSh1TaTQEts','86o_CqMcBQI'], direct:'https://www.youtube.com/@dwnews/live' },
+  { n:'Euronews',   ids:['RHHXkRpuaHk'], direct:'https://www.youtube.com/@euronews/live' },
+  { n:'Bloomberg',  ids:['dp8PhLsUcFE'], direct:'https://www.youtube.com/@BloombergTV/live' },
+];
+var currentChannel = 0;
+var currentIdIndex = 0;
+
+// X accounts by conflict — these get pulled via nitter RSS
+var CONFLICTS = [
+  {
+    id:'ucrania', name:'Ucrania / Rusia', tag:'guerra', int:95, alertas:8, paises:50,
+    lat:49, lng:32, desc:'Conflicto armado activo. Frentes en Kursk, Zaporiyia y Donetsk. +620K bajas totales estimadas.',
+    color:'#f0334a',
+    links:[
+      {l:'ISW Daily',    u:'https://understandingwar.org',c:'#7c4dff'},
+      {l:'DeepStateMap', u:'https://deepstatemap.live',c:'#00b4d8'},
+      {l:'Kyiv Indep.',  u:'https://kyivindependent.com',c:'#00d4ff'},
+      {l:'LiveUAMap',    u:'https://liveuamap.com',c:'#f0334a'},
+      {l:'Oryx Losses',  u:'https://www.oryxspioenkop.com',c:'#4caf50'},
+      {l:'Sentinel Hub', u:'https://apps.sentinel-hub.com/eo-browser/',c:'#9b5de5'},
+      {l:'FlightRadar24',u:'https://www.flightradar24.com',c:'#f60'},
+    ],
+    xAccounts:[
+      {h:'@RALee85',      u:'https://x.com/RALee85',      rss:'https://rsshub.app/x/user/RALee85'},
+      {h:'@UAWeapons',    u:'https://x.com/UAWeapons',    rss:'https://rsshub.app/x/user/UAWeapons'},
+      {h:'@War_Mapper',   u:'https://x.com/War_Mapper',   rss:'https://rsshub.app/x/user/War_Mapper'},
+      {h:'@GeoConfirmed', u:'https://x.com/GeoConfirmed', rss:'https://rsshub.app/x/user/GeoConfirmed'},
+      {h:'@KofmanMichael',u:'https://x.com/KofmanMichael',rss:'https://rsshub.app/x/user/KofmanMichael'},
+    ]
+  },
+  {
+    id:'gaza', name:'Gaza / Hamás / Israel', tag:'guerra', int:90, alertas:6, paises:6,
+    lat:31.5, lng:34.4, desc:'Operaciones israelíes en Gaza. Crisis humanitaria severa. +47K bajas civiles estimadas.',
+    color:'#f07330',
+    links:[
+      {l:'Middle East Eye',u:'https://www.middleeasteye.net',c:'#09c'},
+      {l:'Al Jazeera',     u:'https://www.aljazeera.com/tag/israel-palestine-conflict/',c:'#c4a029'},
+      {l:'OCHA',           u:'https://www.unocha.org/occupied-palestinian-territory',c:'#00b4d8'},
+      {l:'ACLED Gaza',     u:'https://acleddata.com/israel-palestine-crisis/',c:'#ff4081'},
+      {l:'Bellingcat',     u:'https://www.bellingcat.com',c:'#00d4ff'},
+    ],
+    xAccounts:[
+      {h:'@IntelCrab',     u:'https://x.com/IntelCrab',     rss:'https://rsshub.app/x/user/IntelCrab'},
+      {h:'@OSINTdefender', u:'https://x.com/OSINTdefender', rss:'https://rsshub.app/x/user/OSINTdefender'},
+      {h:'@MiddleEastEye', u:'https://x.com/MiddleEastEye', rss:'https://rsshub.app/x/user/MiddleEastEye'},
+      {h:'@HawzhinOzodi',  u:'https://x.com/HawzhinOzodi',  rss:'https://rsshub.app/x/user/HawzhinOzodi'},
+    ]
+  },
+  {
+    id:'iran', name:'Tensión Irán – Israel', tag:'tension', int:82, alertas:4, paises:6,
+    lat:32, lng:35.5, desc:'Intercambio de ataques directos. Programa nuclear iraní supera 83.7% de enriquecimiento.',
+    color:'#f0c330',
+    links:[
+      {l:'Middle East Eye',u:'https://www.middleeasteye.net',c:'#09c'},
+      {l:'AIEA / IAEA',    u:'https://www.iaea.org',c:'#7c4dff'},
+      {l:'Reuters MENA',   u:'https://www.reuters.com/world/middle-east/',c:'#f60'},
+      {l:'FlightRadar24',  u:'https://www.flightradar24.com',c:'#f60'},
+    ],
+    xAccounts:[
+      {h:'@KofmanMichael', u:'https://x.com/KofmanMichael', rss:'https://rsshub.app/x/user/KofmanMichael'},
+      {h:'@IntelCrab',     u:'https://x.com/IntelCrab',     rss:'https://rsshub.app/x/user/IntelCrab'},
+      {h:'@MiddleEastEye', u:'https://x.com/MiddleEastEye', rss:'https://rsshub.app/x/user/MiddleEastEye'},
+    ]
+  },
+  {
+    id:'marrojo', name:'Mar Rojo – Houthi / Ormuz', tag:'naval', int:80, alertas:5, paises:8,
+    lat:14, lng:42.5, desc:'892 buques desviados del Canal de Suez. Ataques con misiles antibuque y drones.',
+    color:'#00d4ff',
+    links:[
+      {l:'MarineTraffic',  u:'https://www.marinetraffic.com',c:'#00b4d8'},
+      {l:'VesselFinder',   u:'https://www.vesselfinder.com',c:'#0077b6'},
+      {l:'ADS-B Exch.',    u:'https://www.adsbexchange.com',c:'#7c4dff'},
+      {l:'The War Zone',   u:'https://www.thedrive.com/the-war-zone',c:'#ff6b35'},
+      {l:'GlobalFishWatch',u:'https://globalfishingwatch.org/map',c:'#4caf50'},
+    ],
+    xAccounts:[
+      {h:'@TankerTrackers',u:'https://x.com/TankerTrackers',rss:'https://rsshub.app/x/user/TankerTrackers'},
+      {h:'@IntelCrab',     u:'https://x.com/IntelCrab',     rss:'https://rsshub.app/x/user/IntelCrab'},
+      {h:'@OSINTdefender', u:'https://x.com/OSINTdefender', rss:'https://rsshub.app/x/user/OSINTdefender'},
+    ]
+  },
+  {
+    id:'sudan', name:'Conflicto Sudán Civil', tag:'guerra', int:85, alertas:4, paises:2,
+    lat:15.5, lng:32.5, desc:'SAF vs RSF. +150K muertos. 10.8M desplazados. Crisis humanitaria masiva.',
+    color:'#f0334a',
+    links:[
+      {l:'ACLED Sudán',    u:'https://acleddata.com/sudan-crisis/',c:'#ff4081'},
+      {l:'OCHA Sudán',     u:'https://www.unocha.org/sudan',c:'#00b4d8'},
+      {l:'Al Jazeera',     u:'https://www.aljazeera.com/tag/sudan/',c:'#c4a029'},
+      {l:'Sentinel Hub',   u:'https://apps.sentinel-hub.com/eo-browser/',c:'#9b5de5'},
+    ],
+    xAccounts:[
+      {h:'@OSINTdefender', u:'https://x.com/OSINTdefender', rss:'https://rsshub.app/x/user/OSINTdefender'},
+      {h:'@Conflicts',     u:'https://x.com/Conflicts',     rss:'https://rsshub.app/x/user/Conflicts'},
+      {h:'@IntelCrab',     u:'https://x.com/IntelCrab',     rss:'https://rsshub.app/x/user/IntelCrab'},
+    ]
+  },
+  {
+    id:'taiwan', name:'Taiwán / DPRK / SCS', tag:'tension', int:75, alertas:3, paises:6,
+    lat:23.5, lng:118, desc:'Maniobras navales chinas en el estrecho. DPRK con ejercicios de ICBM. Disputas en SCS.',
+    color:'#f0c330',
+    links:[
+      {l:'FlightRadar24',  u:'https://www.flightradar24.com',c:'#f60'},
+      {l:'ADS-B Exch.',    u:'https://www.adsbexchange.com',c:'#7c4dff'},
+      {l:'38 North DPRK',  u:'https://www.38north.org',c:'#ff9100'},
+      {l:'MarineTraffic',  u:'https://www.marinetraffic.com',c:'#00b4d8'},
+      {l:'N2YO Sat.',      u:'https://www.n2yo.com',c:'#ffd600'},
+    ],
+    xAccounts:[
+      {h:'@IntelCrab',     u:'https://x.com/IntelCrab',     rss:'https://rsshub.app/x/user/IntelCrab'},
+      {h:'@MT_Anderson',   u:'https://x.com/MT_Anderson',   rss:'https://rsshub.app/x/user/MT_Anderson'},
+    ]
+  },
+  {
+    id:'sahel', name:'Sahel / África Occidental', tag:'crisis', int:72, alertas:3, paises:5,
+    lat:14, lng:2, desc:'JNIM e ISGS activos en Mali, Burkina Faso y Níger. Retiro de fuerzas occidentales.',
+    color:'#f07330',
+    links:[
+      {l:'ACLED Sahel',    u:'https://acleddata.com/africa/',c:'#ff4081'},
+      {l:'Al Jazeera Afr.',u:'https://www.aljazeera.com/africa/',c:'#c4a029'},
+      {l:'ISW',            u:'https://understandingwar.org',c:'#7c4dff'},
+      {l:'CFR Tracker',    u:'https://www.cfr.org/global-conflict-tracker',c:'#9c27b0'},
+    ],
+    xAccounts:[
+      {h:'@OSINTdefender', u:'https://x.com/OSINTdefender', rss:'https://rsshub.app/x/user/OSINTdefender'},
+      {h:'@Conflicts',     u:'https://x.com/Conflicts',     rss:'https://rsshub.app/x/user/Conflicts'},
+    ]
+  },
+  {
+    id:'cyber', name:'Ciberguerra Global', tag:'cyber', int:77, alertas:5, paises:30,
+    lat:51, lng:15, desc:'APT28/Sandworm activos contra infraestructura crítica en Europa y EE.UU.',
+    color:'#30f090',
+    links:[
+      {l:'CISA Alerts',    u:'https://www.cisa.gov/news-events/cybersecurity-advisories',c:'#4caf50'},
+      {l:'Recorded Future',u:'https://www.recordedfuture.com',c:'#4caf50'},
+      {l:'Mandiant',       u:'https://www.mandiant.com/resources/blog',c:'#9b5de5'},
+      {l:'AlienVault OTX', u:'https://otx.alienvault.com',c:'#30f090'},
+      {l:'GreyNoise',      u:'https://www.greynoise.io',c:'#9c27b0'},
+    ],
+    xAccounts:[
+      {h:'@IntelCrab',     u:'https://x.com/IntelCrab',     rss:'https://rsshub.app/x/user/IntelCrab'},
+      {h:'@OSINTdefender', u:'https://x.com/OSINTdefender', rss:'https://rsshub.app/x/user/OSINTdefender'},
+    ]
+  },
 ];
 
-// ═══════════════════════════════════════════════
-// CONFLICT CARDS (grouped zones)
-// ═══════════════════════════════════════════════
-var CARDS = [
-  { name:'Ucrania / Rusia', tag:'war', color:'#ff3d57', int:95, cid:1,
-    kpis:[{v:'95',l:'Intensidad'},{v:'8',l:'Alertas'},{v:'50',l:'Países'}],
-    links:[{l:'ISW Daily',u:'https://understandingwar.org',c:'#7c4dff'},{l:'DeepStateMap',u:'https://deepstatemap.live',c:'#00b4d8'},{l:'Kyiv Indep.',u:'https://kyivindependent.com',c:'#00e5ff'},{l:'LiveUAMap',u:'https://liveuamap.com',c:'#ff3d57'},{l:'Oryx Losses',u:'https://www.oryxspioenkop.com',c:'#4caf50'},{l:'FlightRadar24',u:'https://www.flightradar24.com',c:'#f60'},{l:'MarineTraffic',u:'https://www.marinetraffic.com',c:'#00b4d8'},{l:'Sentinel Hub',u:'https://apps.sentinel-hub.com/eo-browser/',c:'#b44fff'}] },
-  { name:'Gaza / Israel / Irán', tag:'war', color:'#ff7c1a', int:90, cid:2,
-    kpis:[{v:'90',l:'Intensidad'},{v:'6',l:'Alertas'},{v:'6',l:'Países'}],
-    links:[{l:'Middle East Eye',u:'https://www.middleeasteye.net',c:'#09c'},{l:'Al Jazeera',u:'https://www.aljazeera.com/tag/israel-palestine-conflict/',c:'#c4a029'},{l:'OCHA',u:'https://www.unocha.org/occupied-palestinian-territory',c:'#00b4d8'},{l:'ACLED Gaza',u:'https://acleddata.com/israel-palestine-crisis/',c:'#ff4081'},{l:'AIEA/IAEA',u:'https://www.iaea.org',c:'#7c4dff'},{l:'Bellingcat',u:'https://www.bellingcat.com',c:'#00e5ff'},{l:'Sentinel Hub',u:'https://apps.sentinel-hub.com/eo-browser/',c:'#b44fff'}] },
-  { name:'Mar Rojo / Houthi / Ormuz', tag:'naval', color:'#00e5ff', int:80, cid:4,
-    kpis:[{v:'80',l:'Intensidad'},{v:'5',l:'Alertas'},{v:'892',l:'Buques desv.'}],
-    links:[{l:'MarineTraffic',u:'https://www.marinetraffic.com',c:'#00b4d8'},{l:'VesselFinder',u:'https://www.vesselfinder.com',c:'#0077b6'},{l:'GlobalFishWatch',u:'https://globalfishingwatch.org/map',c:'#4caf50'},{l:'ADS-B Exch.',u:'https://www.adsbexchange.com',c:'#7c4dff'},{l:'The War Zone',u:'https://www.thedrive.com/the-war-zone',c:'#ff6b35'},{l:'Reuters Shipping',u:'https://www.reuters.com/business/shipping/',c:'#f60'}] },
-  { name:'África: Sahel / Sudán / Somalia', tag:'crisis', color:'#ffd600', int:78, cid:5,
-    kpis:[{v:'78',l:'Intensidad'},{v:'4',l:'Alertas'},{v:'12',l:'Países'}],
-    links:[{l:'ACLED África',u:'https://acleddata.com/africa/',c:'#ff4081'},{l:'OCHA Sudán',u:'https://www.unocha.org/sudan',c:'#00b4d8'},{l:'Al Jazeera Afr.',u:'https://www.aljazeera.com/africa/',c:'#c4a029'},{l:'ISW',u:'https://understandingwar.org',c:'#7c4dff'},{l:'Sentinel Hub',u:'https://apps.sentinel-hub.com/eo-browser/',c:'#b44fff'},{l:'CFR Tracker',u:'https://www.cfr.org/global-conflict-tracker',c:'#9c27b0'}] },
-  { name:'Asia-Pacífico: Taiwán / DPRK / SCS', tag:'tension', color:'#b44fff', int:75, cid:7,
-    kpis:[{v:'75',l:'Intensidad'},{v:'3',l:'Alertas'},{v:'11',l:'Países'}],
-    links:[{l:'FlightRadar24',u:'https://www.flightradar24.com',c:'#f60'},{l:'ADS-B Exch.',u:'https://www.adsbexchange.com',c:'#7c4dff'},{l:'MarineTraffic',u:'https://www.marinetraffic.com',c:'#00b4d8'},{l:'38 North DPRK',u:'https://www.38north.org',c:'#ff9100'},{l:'N2YO Sat.',u:'https://www.n2yo.com',c:'#ffd600'},{l:'CFR Taiwán',u:'https://www.cfr.org/global-conflict-tracker/conflict/taiwan-strait',c:'#7c4dff'}] },
-  { name:'Ciberguerra Global', tag:'cyber', color:'#00ff87', int:77, cid:9,
-    kpis:[{v:'77',l:'Intensidad'},{v:'5',l:'Alertas'},{v:'30',l:'Países'}],
-    links:[{l:'CISA Alerts',u:'https://www.cisa.gov/news-events/cybersecurity-advisories',c:'#4caf50'},{l:'Recorded Future',u:'https://www.recordedfuture.com',c:'#4caf50'},{l:'Mandiant',u:'https://www.mandiant.com/resources/blog',c:'#b44fff'},{l:'AlienVault OTX',u:'https://otx.alienvault.com',c:'#00ff87'},{l:'GreyNoise',u:'https://www.greynoise.io',c:'#9c27b0'},{l:'Shodan',u:'https://www.shodan.io',c:'#00e5ff'}] },
+// Static "news" per conflict (in real deployment these come from RSS)
+var STATIC_NEWS = {
+  ucrania:[
+    {title:'ISW: Rusia avanza en eje Kursk tras reorganización táctica',url:'https://understandingwar.org',time:'hace 2h'},
+    {title:'Ucrania reporta 78 drones interceptados en la noche',url:'https://kyivindependent.com',time:'hace 4h'},
+    {title:'Oryx confirma pérdida de 18 vehículos rusos en 24h',url:'https://www.oryxspioenkop.com',time:'hace 6h'},
+  ],
+  gaza:[
+    {title:'OCHA: situación humanitaria crítica en Gaza norte',url:'https://www.unocha.org/occupied-palestinian-territory',time:'hace 1h'},
+    {title:'Israel confirma operaciones en corredor Filadelfia',url:'https://www.middleeasteye.net',time:'hace 3h'},
+    {title:'Hamás reporta 127 muertos en bombardeos del día',url:'https://www.aljazeera.com',time:'hace 5h'},
+  ],
+  iran:[
+    {title:'AIEA: Irán acelera enriquecimiento en Fordow',url:'https://www.iaea.org',time:'hace 3h'},
+    {title:'Israel realiza ejercicios de respuesta ante misiles balísticos',url:'https://www.flightradar24.com',time:'hace 8h'},
+  ],
+  marrojo:[
+    {title:'Houthi ataca buque portacontenedores con misil YJ-12',url:'https://www.marinetraffic.com',time:'hace 1h'},
+    {title:'MarineTraffic: 12 buques desvían ruta Suez en las últimas 24h',url:'https://www.marinetraffic.com',time:'hace 5h'},
+    {title:'USS Gravely intercepta 3 drones sobre el estrecho',url:'https://www.thedrive.com/the-war-zone',time:'hace 7h'},
+  ],
+  sudan:[
+    {title:'RSF captura ciudad clave en el estado de Gezira',url:'https://acleddata.com/sudan-crisis/',time:'hace 4h'},
+    {title:'OCHA: 500K nuevos desplazados en marzo',url:'https://www.unocha.org/sudan',time:'hace 12h'},
+  ],
+  taiwan:[
+    {title:'DPRK lanza ICBM Hwasong-18 al Mar del Japón',url:'https://www.38north.org',time:'hace 2h'},
+    {title:'China envía 24 aviones de combate al ADIZ de Taiwán',url:'https://www.flightradar24.com',time:'hace 6h'},
+  ],
+  sahel:[
+    {title:'JNIM ataca convoy de FAMA en región de Ségou',url:'https://acleddata.com/africa/',time:'hace 5h'},
+    {title:'Burkina Faso: nuevo ataque a infraestructura energética',url:'https://www.aljazeera.com/africa/',time:'hace 9h'},
+  ],
+  cyber:[
+    {title:'CISA alerta sobre APT ruso activo en infraestructura crítica',url:'https://www.cisa.gov',time:'hace 1h'},
+    {title:'Ataque a red eléctrica estonia atribuido a Sandworm',url:'https://www.recordedfuture.com',time:'hace 3h'},
+    {title:'Mandiant detecta nueva campaña de phishing en sector OTAN',url:'https://www.mandiant.com',time:'hace 6h'},
+  ],
+};
+
+var TICKER_ITEMS = [
+  {t:'Rusia lanza 83 drones en ataque nocturno contra infraestructura energética ucraniana', u:'https://liveuamap.com'},
+  {t:'China realiza ejercicios navales de 72h en el estrecho de Taiwán sin previo aviso', u:'https://www.flightradar24.com'},
+  {t:'Houthi reivindica ataque con misil antibuque en el Mar Rojo — buque averiado', u:'https://www.marinetraffic.com'},
+  {t:'ISW: fuerzas rusas avanzan 3km en el eje Avdiivka-Pokrovsk en las últimas 48h', u:'https://understandingwar.org'},
+  {t:'AIEA confirma: reservas iraníes de uranio enriquecido al 83.7% aumentaron un 22%', u:'https://www.iaea.org'},
+  {t:'CISA emite alerta crítica sobre APT28 activo en redes de infraestructura occidental', u:'https://www.cisa.gov'},
+  {t:'ACLED: 47 muertos en nuevos enfrentamientos SAF-RSF en Jartum Norte', u:'https://acleddata.com'},
+  {t:'MarineTraffic: 892 buques desviados del Canal de Suez — récord histórico', u:'https://www.marinetraffic.com'},
+  {t:'DPRK lanza proyectil balístico de corto alcance al Mar del Japón', u:'https://www.38north.org'},
 ];
 
-var TICKERS = [
-  {t:'Rusia lanza ataque de drones contra infraestructura energética ucraniana',u:'https://liveuamap.com'},
-  {t:'China realiza ejercicios militares de 72h en el estrecho de Taiwán',u:'https://www.flightradar24.com'},
-  {t:'Houthi ataca portacontenedores en el Mar Rojo con misil antibuque',u:'https://www.marinetraffic.com'},
-  {t:'ISW reporta avances rusos en eje Avdiivka-Pokrovsk',u:'https://understandingwar.org'},
-  {t:'Israel confirma eliminación de comandante PIJ en Gaza central',u:'https://www.middleeasteye.net'},
-  {t:'AIEA: enriquecimiento de uranio iraní supera el 83.7%',u:'https://www.iaea.org'},
-  {t:'DPRK prueba nuevo ICBM — EE.UU. y Corea del Sur elevan alerta',u:'https://www.38north.org'},
-  {t:'Hackers rusos atacan infraestructura crítica en tres países bálticos',u:'https://www.cisa.gov/news-events/cybersecurity-advisories'},
-  {t:'MarineTraffic: 892 buques desviados del Canal de Suez en 2025',u:'https://www.marinetraffic.com'},
+var INTENSITY_DATA = [
+  {r:'Europa del Este', v:95, c:'#f0334a'},
+  {r:'MENA',           v:85, c:'#f07330'},
+  {r:'África Sub-Sah.',v:72, c:'#f0c330'},
+  {r:'Asia-Pacífico',  v:70, c:'#f0c330'},
+  {r:'Asia del Sur',   v:62, c:'#00d4ff'},
+  {r:'América Latina', v:45, c:'#30f090'},
 ];
 
-var INTDATA = [
-  {r:'Europa del Este',v:95,c:'#ff3d57'},
-  {r:'MENA',v:85,c:'#ff7c1a'},
-  {r:'África Sub-Sah.',v:72,c:'#ffd600'},
-  {r:'Asia-Pacífico',v:70,c:'#ffd600'},
-  {r:'Asia del Sur',v:62,c:'#00e5ff'},
-  {r:'América Latina',v:45,c:'#00ff87'},
+// Global X accounts for "X GLOBAL" right tab
+var X_GLOBAL = [
+  {h:'@IntelCrab',      u:'https://x.com/IntelCrab',      rss:'https://rsshub.app/x/user/IntelCrab'},
+  {h:'@OSINTdefender',  u:'https://x.com/OSINTdefender',  rss:'https://rsshub.app/x/user/OSINTdefender'},
+  {h:'@GeoConfirmed',   u:'https://x.com/GeoConfirmed',   rss:'https://rsshub.app/x/user/GeoConfirmed'},
+  {h:'@Conflicts',      u:'https://x.com/Conflicts',      rss:'https://rsshub.app/x/user/Conflicts'},
+  {h:'@RALee85',        u:'https://x.com/RALee85',        rss:'https://rsshub.app/x/user/RALee85'},
+  {h:'@TankerTrackers', u:'https://x.com/TankerTrackers', rss:'https://rsshub.app/x/user/TankerTrackers'},
 ];
 
-// ═══════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
 // MAP
-// ═══════════════════════════════════════════════
-var map, markers={}, active={war:1,crisis:1,tension:1,naval:1,air:1,cyber:1,nuclear:1};
+// ══════════════════════════════════════════════════════
+var leafMap, mapMarkers={}, activeLayers={guerra:1,crisis:1,tension:1,naval:1,nuclear:1,cyber:1,aéreo:1};
 
-document.head.insertAdjacentHTML('beforeend','<style>@keyframes dp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.7;transform:scale(1.2)}}@keyframes rp{0%{transform:scale(1);opacity:.4}100%{transform:scale(3);opacity:0}}</style>');
+document.head.insertAdjacentHTML('beforeend','<style>@keyframes mp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.15)}}@keyframes rp{0%{transform:scale(1);opacity:.35}100%{transform:scale(3.5);opacity:0}}</style>');
 
-function icon(tag,intensity){
-  var tc=TC[tag]||TC.tension, sz=Math.round(12+(intensity-40)/60*10);
-  sz=Math.max(12,Math.min(22,sz));
-  var h=sz/2, sq=(tag==='naval'||tag==='air'||tag==='cyber');
-  return L.divIcon({html:
-    '<div style="position:relative;width:'+sz+'px;height:'+sz+'px">'+
-    '<div style="position:absolute;top:-'+h+'px;left:-'+h+'px;width:'+(sz*2)+'px;height:'+(sz*2)+'px;border:1.5px solid '+tc.f+';opacity:.25;animation:rp 2.5s ease-out infinite;'+(sq?'border-radius:2px':'border-radius:50%')+';"></div>'+
-    '<div style="width:'+sz+'px;height:'+sz+'px;background:'+tc.f+';box-shadow:0 0 '+sz+'px '+tc.g+';animation:dp 2.5s ease-in-out infinite;cursor:pointer;'+(sq?'border-radius:2px;transform:rotate(45deg)':'border-radius:50%')+';"></div>'+
-    '</div>',
-    iconSize:[sz,sz],iconAnchor:[h,h],className:''});
-}
-
-function popup(c){
-  var tc=TC[c.tag]||TC.tension;
-  var ls=''; c.links.forEach(function(x){ls+='<a class="plink" href="'+x.u+'" target="_blank" rel="noopener" style="color:'+x.c+';border-color:'+x.c+'40;background:'+x.c+'12">'+x.l+'</a>';});
-  var xs=''; c.xl.forEach(function(x){xs+='<a class="pxlink" href="'+x.u+'" target="_blank" rel="noopener">'+x.n+'</a>';});
-  return '<div class="pt" style="color:'+tc.f+'">'+c.title+'</div>'+
-    '<span class="ptag" style="background:'+tc.b+';color:'+tc.f+';border:1px solid '+tc.f+'40">'+c.tag.toUpperCase()+'</span>'+
-    '<div class="pdesc">'+c.desc+'</div>'+
-    '<div class="pkpis">'+
-      '<div class="pkpi"><div class="pkpiv" style="color:'+tc.f+'">'+c.int+'/100</div><div class="pkpil">Intensidad</div></div>'+
-      '<div class="pkpi"><div class="pkpiv" style="color:'+tc.f+'">'+c.alertas+'</div><div class="pkpil">Alertas hoy</div></div>'+
-      '<div class="pkpi"><div class="pkpiv" style="color:'+tc.f+'">'+c.paises+'</div><div class="pkpil">Países</div></div>'+
-    '</div>'+
-    '<div class="psec"><div class="psecl">// FUENTES & TRACKERS</div><div class="plinks">'+ls+'</div></div>'+
-    '<div class="psec"><div class="psecl" style="color:#1d9bf0;">𝕏 CUENTAS X / OSINT</div><div class="plinks">'+xs+'</div></div>'+
-    '<div style="font-family:Share Tech Mono,monospace;font-size:9px;color:#3d5470;margin-top:4px">REGIÓN: '+c.region+'</div>';
-}
-
-function drawMap(){
-  for(var k in markers)map.removeLayer(markers[k]);
-  markers={};
-  CF.forEach(function(c){
-    if(!active[c.tag])return;
-    var tc=TC[c.tag]||TC.tension;
-    var m=L.marker([c.lat,c.lng],{icon:icon(c.tag,c.int)}).addTo(map);
-    L.circle([c.lat,c.lng],{radius:80000+c.int*4000,color:tc.f,fillColor:tc.f,fillOpacity:.05,opacity:.18,weight:1}).addTo(map);
-    m.bindPopup(popup(c),{maxWidth:300});
-    markers[c.id]=m;
+function makeIcon(tag,intensity){
+  var tc=TC[tag]||TC.tension, sz=Math.max(11,Math.min(20,Math.round(11+(intensity-40)/60*9)));
+  var h=sz/2, sq=(tag==='naval'||tag==='aéreo'||tag==='cyber');
+  return L.divIcon({
+    html:'<div style="position:relative;width:'+sz+'px;height:'+sz+'px">'+
+      '<div style="position:absolute;top:-'+h+'px;left:-'+h+'px;width:'+(sz*2)+'px;height:'+(sz*2)+'px;border:1.5px solid '+tc.f+';opacity:.25;animation:rp 3s ease-out infinite;'+(sq?'border-radius:2px':'border-radius:50%')+'"></div>'+
+      '<div style="width:'+sz+'px;height:'+sz+'px;background:'+tc.f+';box-shadow:0 0 '+(sz+2)+'px '+tc.g+';animation:mp 3s ease-in-out infinite;cursor:pointer;'+(sq?'border-radius:2px;transform:rotate(45deg)':'border-radius:50%')+'"></div></div>',
+    iconSize:[sz,sz],iconAnchor:[h,h],className:''
   });
 }
 
-function flyTo(id){
-  var c=null; for(var i=0;i<CF.length;i++){if(CF[i].id===id){c=CF[i];break;}}
-  if(!c)return;
-  map.flyTo([c.lat,c.lng],5,{duration:1.2});
-  setTimeout(function(){if(markers[id])markers[id].openPopup();},1300);
+function buildPopup(c){
+  var tc=TC[c.tag]||TC.tension;
+  var ls=c.links.map(function(x){return '<a class="pu-link" href="'+x.u+'" target="_blank" rel="noopener" style="color:'+x.c+';border-color:'+x.c+'40;background:'+x.c+'12">'+x.l+'</a>';}).join('');
+  var xs=c.xAccounts.map(function(x){return '<a class="pu-xlink" href="'+x.u+'" target="_blank" rel="noopener">'+x.h+'</a>';}).join('');
+  return '<div class="pu-title" style="color:'+tc.f+'">'+c.name+'</div>'+
+    '<span class="pu-tag" style="background:'+tc.b+';color:'+tc.f+';border:1px solid '+tc.f+'40">'+c.tag.toUpperCase()+'</span>'+
+    '<div class="pu-desc">'+c.desc+'</div>'+
+    '<div class="pu-kpis">'+
+      '<div class="pu-kpi"><div class="pu-kv" style="color:'+tc.f+'">'+c.int+'/100</div><div class="pu-kl">Intensidad</div></div>'+
+      '<div class="pu-kpi"><div class="pu-kv" style="color:'+tc.f+'">'+c.alertas+'</div><div class="pu-kl">Alertas</div></div>'+
+      '<div class="pu-kpi"><div class="pu-kv" style="color:'+tc.f+'">'+c.paises+'</div><div class="pu-kl">Países</div></div>'+
+    '</div>'+
+    '<div class="pu-section-label">FUENTES & TRACKERS</div><div class="pu-links">'+ls+'</div>'+
+    '<div class="pu-section-label" style="color:#1d9bf0">𝕏 CUENTAS OSINT</div><div class="pu-links">'+xs+'</div>';
 }
 
-function toggleTag(btn){
-  var t=btn.dataset.t;
-  active[t]=active[t]?0:1;
-  btn.classList.toggle('on',!!active[t]);
-  drawMap();
+function renderMap(){
+  for(var k in mapMarkers)leafMap.removeLayer(mapMarkers[k]);
+  mapMarkers={};
+  CONFLICTS.forEach(function(c){
+    if(!activeLayers[c.tag])return;
+    var tc=TC[c.tag]||TC.tension;
+    var m=L.marker([c.lat,c.lng],{icon:makeIcon(c.tag,c.int)}).addTo(leafMap);
+    L.circle([c.lat,c.lng],{radius:70000+c.int*5000,color:tc.f,fillColor:tc.f,fillOpacity:.04,opacity:.15,weight:1}).addTo(leafMap);
+    m.bindPopup(buildPopup(c),{maxWidth:310});
+    mapMarkers[c.id]=m;
+  });
+}
+
+function flyToConflict(id){
+  var c=null; for(var i=0;i<CONFLICTS.length;i++){if(CONFLICTS[i].id===id){c=CONFLICTS[i];break;}}
+  if(!c)return;
+  leafMap.flyTo([c.lat,c.lng],5,{duration:1.3});
+  setTimeout(function(){if(mapMarkers[id])mapMarkers[id].openPopup();},1400);
 }
 
 function initMap(){
-  map=L.map('map',{center:[20,20],zoom:2,zoomControl:true,attributionControl:false,minZoom:2,maxZoom:12});
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(map);
-  drawMap();
+  leafMap=L.map('map',{center:[20,15],zoom:2,zoomControl:true,attributionControl:false,minZoom:2,maxZoom:12});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(leafMap);
+  renderMap();
 }
 
-// ═══════════════════════════════════════════════
-// LIVE CHANNELS
-// ═══════════════════════════════════════════════
-function initLive(){
-  var bar=document.getElementById('chanbtns');
-  CH.forEach(function(ch,i){
+// Layer toggle bar
+function initLayerBar(){
+  var bar=document.getElementById('layer-bar');
+  var layers=['guerra','crisis','tension','naval','nuclear','cyber','aéreo'];
+  layers.forEach(function(l){
+    var tc=TC[l]||TC.tension;
     var btn=document.createElement('button');
-    btn.className='cbtn'+(i===0?' on':'');
-    btn.textContent=ch.n;
+    btn.className='layer-btn on'; btn.dataset.l=l;
+    btn.innerHTML='<span class="dot" style="background:'+tc.f+'"></span>'+l.toUpperCase();
     btn.onclick=function(){
-      document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('on');});
-      btn.classList.add('on');
-      document.getElementById('vframe').src='https://www.youtube.com/embed/'+ch.id+'?autoplay=1&mute=1&rel=0';
-      document.getElementById('vdirect').href='https://www.youtube.com/watch?v='+ch.id;
-      document.getElementById('vdirect').textContent='abrir '+ch.n+' en YouTube ↗';
+      activeLayers[l]=activeLayers[l]?0:1;
+      btn.classList.toggle('on',!!activeLayers[l]);
+      renderMap();
     };
     bar.appendChild(btn);
   });
-  document.getElementById('vframe').src='https://www.youtube.com/embed/'+CH[0].id+'?autoplay=1&mute=1&rel=0';
-  document.getElementById('vdirect').href='https://www.youtube.com/watch?v='+CH[0].id;
-  // Show fallback message if iframe fails to load
-  document.getElementById('vframe').onerror = function(){ document.getElementById('livelink').style.background='rgba(255,61,87,.1)'; };
 }
 
-// ═══════════════════════════════════════════════
-// X ACCOUNTS BLOCK
-// ═══════════════════════════════════════════════
-function initXBlock(){
-  var tabsEl=document.getElementById('xtabs');
-  var accsEl=document.getElementById('xaccounts');
+// ══════════════════════════════════════════════════════
+// YOUTUBE — with fallback to next ID on error
+// ══════════════════════════════════════════════════════
+function loadYTChannel(chIdx,idIdx){
+  currentChannel=chIdx; currentIdIndex=idIdx||0;
+  var ch=YT_CHANNELS[chIdx]; if(!ch)return;
+  var id=ch.ids[idIdx||0]||ch.ids[0];
+  var wrap=document.getElementById('yt-frame-wrap');
+  var frame=document.getElementById('yt-iframe');
+  wrap.classList.remove('error');
+  frame.src='https://www.youtube.com/embed/'+id+'?autoplay=1&mute=1&rel=0&modestbranding=1';
+  document.getElementById('yt-direct-btn').href=ch.direct;
+  document.getElementById('yt-direct-btn').textContent='▶ VER '+ch.n.toUpperCase()+' EN YOUTUBE';
+  document.querySelectorAll('.yt-tab').forEach(function(t,i){t.classList.toggle('on',i===chIdx);});
+  // If iframe fails, YouTube sends postMessage — we listen for it
+}
 
-  function showGroup(idx){
-    accsEl.innerHTML='';
-    document.querySelectorAll('.xtab').forEach(function(t){t.classList.remove('on');});
-    tabsEl.children[idx].classList.add('on');
-    XGROUPS[idx].accounts.forEach(function(a){
-      var link=document.createElement('a');
-      link.className='xacc'; link.href=a.u; link.target='_blank'; link.rel='noopener'; link.textContent=a.n;
-      accsEl.appendChild(link);
-    });
+// Detect YouTube unavailable via iframe load
+function ytCheckLoad(){
+  var frame=document.getElementById('yt-iframe');
+  frame.onload=function(){
+    try {
+      // Can't access cross-origin frame, but if src is set and loaded without error, it's working
+      // We'll check via a 5s timeout if the frame height seems zero (common failure indicator)
+    } catch(e){}
+  };
+}
+
+// Listen for YouTube player errors via postMessage
+window.addEventListener('message',function(e){
+  if(e.data && typeof e.data==='object' && e.data.event==='infoDelivery'){
+    var info=e.data.info;
+    if(info && (info.playerState===0 || info.errorCode)){
+      // Try next ID
+      var ch=YT_CHANNELS[currentChannel];
+      if(ch && currentIdIndex+1 < ch.ids.length){
+        setTimeout(function(){loadYTChannel(currentChannel,currentIdIndex+1);},1000);
+      } else {
+        document.getElementById('yt-frame-wrap').classList.add('error');
+      }
+    }
   }
+});
 
-  XGROUPS.forEach(function(g,i){
-    var tab=document.createElement('span');
-    tab.className='xtab'; tab.textContent=g.label;
-    tab.onclick=function(){showGroup(i);};
-    tabsEl.appendChild(tab);
+function initYT(){
+  var tabs=document.getElementById('yt-tabs');
+  YT_CHANNELS.forEach(function(ch,i){
+    var btn=document.createElement('button');
+    btn.className='yt-tab'+(i===0?' on':''); btn.textContent=ch.n;
+    btn.onclick=function(){loadYTChannel(i,0);};
+    tabs.appendChild(btn);
   });
-  showGroup(0);
+  loadYTChannel(0,0);
 }
 
-// ═══════════════════════════════════════════════
-// CONFLICT CARDS
-// ═══════════════════════════════════════════════
-function initCards(){
-  var cont=document.getElementById('cardsscroll');
-  CARDS.forEach(function(card){
-    var tc=TC[card.tag]||TC.tension;
-    var d=document.createElement('div');
-    d.className='cc'; d.style.borderLeftColor=card.color;
+// ══════════════════════════════════════════════════════
+// CONFLICT ACCORDION
+// ══════════════════════════════════════════════════════
+var xCache={};
 
-    var kh='<div class="cckpis">';
-    card.kpis.forEach(function(k){kh+='<div class="cck"><div class="cckv" style="color:'+card.color+'">'+k.v+'</div><div class="cckl">'+k.l+'</div></div>';});
-    kh+='</div>';
-
-    var lh='<div class="ccsec"><div class="ccsecl">// FUENTES & TRACKERS</div><div class="cclinks">';
-    card.links.forEach(function(lnk){lh+='<a class="cclink" href="'+lnk.u+'" target="_blank" rel="noopener" style="color:'+lnk.c+';border-color:'+lnk.c+'40;background:'+lnk.c+'12">'+lnk.l+'</a>';});
-    lh+='</div></div>';
-
-    d.innerHTML=
-      '<div class="cctop">'+
-        '<div class="ccdot" style="background:'+card.color+';box-shadow:0 0 6px '+card.color+'"></div>'+
-        '<div class="ccname" style="color:'+card.color+'">'+card.name+'</div>'+
-        '<span class="cctag" style="background:'+tc.b+';color:'+card.color+'">'+card.tag.toUpperCase()+'</span>'+
-      '</div>'+
-      kh+
-      '<div class="ccbar"><div class="ccbarf" data-w="'+card.int+'%" style="width:0%;background:'+card.color+'"></div></div>'+
-      lh;
-
-    var cid=card.cid;
-    d.addEventListener('click',function(e){if(e.target.tagName==='A')return; flyTo(cid);});
-    cont.appendChild(d);
-  });
-  setTimeout(function(){document.querySelectorAll('.ccbarf').forEach(function(b){b.style.width=b.getAttribute('data-w');});},700);
+function fetchXFeed(conflict,account,container){
+  var key=account.h;
+  if(xCache[key]){renderXItems(xCache[key],container,account);return;}
+  container.innerHTML='<div class="x-loading">Cargando '+account.h+'…</div>';
+  // Try multiple CORS proxies
+  var proxies=[
+    'https://api.allorigins.win/get?url='+encodeURIComponent(account.rss),
+    'https://corsproxy.io/?'+encodeURIComponent(account.rss),
+  ];
+  tryProxy(proxies,0,account,container);
 }
 
-// ═══════════════════════════════════════════════
+function tryProxy(proxies,idx,account,container){
+  if(idx>=proxies.length){
+    container.innerHTML='<div class="x-loading">'+
+      'No disponible sin API Key.<br>'+
+      '<a href="'+account.u+'" target="_blank" rel="noopener" style="color:#1d9bf0;text-decoration:none;">Ver '+account.h+' en X ↗</a>'+
+    '</div>';
+    return;
+  }
+  fetch(proxies[idx])
+    .then(function(r){return r.json();})
+    .then(function(data){
+      var xml=data.contents||data;
+      if(typeof xml==='string'){
+        var items=parseRSSItems(xml);
+        if(items.length>0){xCache[account.h]=items;renderXItems(items,container,account);return;}
+      }
+      throw new Error('empty');
+    })
+    .catch(function(){tryProxy(proxies,idx+1,account,container);});
+}
+
+function parseRSSItems(xmlStr){
+  var items=[];
+  try {
+    var parser=new DOMParser();
+    var doc=parser.parseFromString(xmlStr,'text/xml');
+    var entries=doc.querySelectorAll('item,entry');
+    entries.forEach(function(item,i){
+      if(i>4)return;
+      var title=item.querySelector('title');
+      var link=item.querySelector('link');
+      var pub=item.querySelector('pubDate,published,updated');
+      if(title){
+        items.push({
+          text:(title.textContent||'').replace(/<[^>]+>/g,'').trim().substring(0,200),
+          url:link?(link.textContent||link.getAttribute('href')||''):'',
+          time:pub?timeAgo(new Date(pub.textContent)):'',
+        });
+      }
+    });
+  } catch(e){}
+  return items;
+}
+
+function timeAgo(date){
+  var diff=Math.floor((Date.now()-date.getTime())/60000);
+  if(diff<60)return 'hace '+diff+'m';
+  if(diff<1440)return 'hace '+Math.floor(diff/60)+'h';
+  return 'hace '+Math.floor(diff/1440)+'d';
+}
+
+function renderXItems(items,container,account){
+  container.innerHTML='';
+  var feed=document.createElement('div'); feed.className='x-feed';
+  items.forEach(function(item){
+    var d=document.createElement('div'); d.className='x-item';
+    d.innerHTML='<div class="x-item-top"><a class="x-handle" href="'+account.u+'" target="_blank" rel="noopener">'+account.h+'</a>'+
+      '<span class="x-time">'+item.time+'</span></div>'+
+      '<div class="x-text">'+item.text+'</div>'+
+      (item.url?'<a class="x-link" href="'+item.url+'" target="_blank" rel="noopener">Ver en X ↗</a>':'');
+    feed.appendChild(d);
+  });
+  container.appendChild(feed);
+}
+
+function buildConflictAccordion(){
+  var cont=document.getElementById('conflicts-section');
+  CONFLICTS.forEach(function(c){
+    var tc=TC[c.tag]||TC.tension;
+    var group=document.createElement('div'); group.className='conflict-group';
+
+    var hdr=document.createElement('div'); hdr.className='cg-header';
+    hdr.innerHTML='<div class="cg-dot" style="background:'+c.color+';box-shadow:0 0 6px '+c.color+'"></div>'+
+      '<div class="cg-name" style="color:'+c.color+'">'+c.name+'</div>'+
+      '<span class="cg-tag" style="background:'+tc.b+';color:'+c.color+'">'+c.tag.toUpperCase()+'</span>'+
+      '<span class="cg-int" style="color:'+c.color+'">'+c.int+'</span>'+
+      '<span class="cg-chevron">▼</span>';
+
+    var body=document.createElement('div'); body.className='cg-body';
+
+    // KPIs
+    var kpis='<div class="cg-kpis">'+
+      '<div class="cg-kpi"><div class="cg-kv" style="color:'+c.color+'">'+c.int+'/100</div><div class="cg-kl">Intensidad</div></div>'+
+      '<div class="cg-kpi"><div class="cg-kv" style="color:'+c.color+'">'+c.alertas+'</div><div class="cg-kl">Alertas</div></div>'+
+      '<div class="cg-kpi"><div class="cg-kv" style="color:'+c.color+'">'+c.paises+'</div><div class="cg-kl">Países</div></div>'+
+      '</div>';
+
+    // Sub-tabs
+    var tabs='<div class="cg-tabs">'+
+      '<button class="cg-tab on" data-t="fuentes">FUENTES</button>'+
+      '<button class="cg-tab" data-t="x">𝕏 OSINT</button>'+
+      '<button class="cg-tab" data-t="noticias">NOTICIAS</button>'+
+      '</div>';
+
+    var contentDiv=document.createElement('div'); contentDiv.className='cg-content';
+
+    body.innerHTML=kpis+tabs;
+    body.appendChild(contentDiv);
+
+    // Build fuentes content
+    var fuentesHtml='<div class="src-links">';
+    c.links.forEach(function(lnk){
+      fuentesHtml+='<a class="src-link" href="'+lnk.u+'" target="_blank" rel="noopener" style="color:'+lnk.c+';border-color:'+lnk.c+'40;background:'+lnk.c+'12">'+lnk.l+'</a>';
+    });
+    fuentesHtml+='</div>';
+    contentDiv.innerHTML=fuentesHtml;
+
+    // Tab switching
+    var activeSubTab='fuentes';
+    body.querySelectorAll('.cg-tab').forEach(function(tab){
+      tab.onclick=function(e){
+        e.stopPropagation();
+        body.querySelectorAll('.cg-tab').forEach(function(t){t.classList.remove('on');});
+        tab.classList.add('on');
+        activeSubTab=tab.dataset.t;
+        if(activeSubTab==='fuentes'){
+          contentDiv.innerHTML=fuentesHtml;
+        } else if(activeSubTab==='noticias'){
+          var news=STATIC_NEWS[c.id]||[];
+          var nh='<div class="news-feed">';
+          news.forEach(function(n){
+            nh+='<a class="news-item" href="'+n.url+'" target="_blank" rel="noopener" style="border-left-color:'+c.color+'">'+
+              '<div class="news-item-title">'+n.title+'</div>'+
+              '<div class="news-item-meta">'+n.time+'</div></a>';
+          });
+          nh+='</div>';
+          contentDiv.innerHTML=nh;
+        } else if(activeSubTab==='x'){
+          contentDiv.innerHTML='';
+          // Show account selector
+          var xSel=document.createElement('div');
+          xSel.style.cssText='display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;';
+          c.xAccounts.forEach(function(acc,ai){
+            var btn=document.createElement('button');
+            btn.style.cssText='font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:10px;cursor:pointer;color:#1d9bf0;border:1px solid #1d9bf040;background:#1d9bf010;transition:all .15s;';
+            btn.textContent=acc.h;
+            btn.onclick=function(e){
+              e.stopPropagation();
+              xSel.querySelectorAll('button').forEach(function(b){b.style.background='#1d9bf010';});
+              btn.style.background='#1d9bf030';
+              fetchXFeed(c.id,acc,xFeedArea);
+            };
+            if(ai===0)btn.style.background='#1d9bf030';
+            xSel.appendChild(btn);
+          });
+          var xFeedArea=document.createElement('div');
+          contentDiv.appendChild(xSel);
+          contentDiv.appendChild(xFeedArea);
+          if(c.xAccounts.length>0) fetchXFeed(c.id,c.xAccounts[0],xFeedArea);
+        }
+      };
+    });
+
+    // Click header → fly to map + toggle body
+    hdr.onclick=function(){
+      var isOpen=body.classList.contains('open');
+      // close all
+      document.querySelectorAll('.cg-body.open').forEach(function(b){b.classList.remove('open');});
+      document.querySelectorAll('.cg-header.open').forEach(function(h){h.classList.remove('open');});
+      if(!isOpen){
+        body.classList.add('open');
+        hdr.classList.add('open');
+        flyToConflict(c.id);
+      }
+    };
+
+    group.appendChild(hdr);
+    group.appendChild(body);
+    cont.appendChild(group);
+  });
+}
+
+// ══════════════════════════════════════════════════════
 // RIGHT PANEL
-// ═══════════════════════════════════════════════
-function initEvents(){
-  var cont=document.getElementById('evlist');
-  document.getElementById('evcnt').textContent=CF.length+' ACTIVOS';
-  var sorted=CF.slice().sort(function(a,b){return b.int-a.int;});
+// ══════════════════════════════════════════════════════
+function switchRightTab(btn){
+  document.querySelectorAll('.right-tab').forEach(function(t){t.classList.remove('on');});
+  document.querySelectorAll('.right-pane').forEach(function(p){p.classList.remove('on');});
+  btn.classList.add('on');
+  document.getElementById('pane-'+btn.dataset.tab).classList.add('on');
+}
+
+function buildSituationsPane(){
+  var pane=document.getElementById('pane-situaciones');
+  var sorted=CONFLICTS.slice().sort(function(a,b){return b.int-a.int;});
   sorted.forEach(function(c){
     var tc=TC[c.tag]||TC.tension;
-    var el=document.createElement('div'); el.className='ev';
-    var ml=c.links.slice(0,2).map(function(x){return '<a class="evlink" href="'+x.u+'" target="_blank" rel="noopener" style="color:'+x.c+';border-color:'+x.c+'40;background:'+x.c+'10" onclick="event.stopPropagation()">'+x.l+'</a>';}).join('');
-    var mx=c.xl.slice(0,2).map(function(x){return '<a class="evlink" href="'+x.u+'" target="_blank" rel="noopener" style="color:#1d9bf0;border-color:#1d9bf030;background:#1d9bf010;border-radius:8px" onclick="event.stopPropagation()">'+x.n+'</a>';}).join('');
+    var el=document.createElement('div'); el.className='feed-item';
+    var ml=c.links.slice(0,2).map(function(x){
+      return '<a class="fi-link" href="'+x.u+'" target="_blank" rel="noopener" style="color:'+x.c+';border-color:'+x.c+'40;background:'+x.c+'10" onclick="event.stopPropagation()">'+x.l+'</a>';
+    }).join('');
+    var mx=c.xAccounts.slice(0,2).map(function(x){
+      return '<a class="fi-xlink" href="'+x.u+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">'+x.h+'</a>';
+    }).join('');
     el.innerHTML=
-      '<div class="evr1"><span class="evtag" style="background:'+tc.b+';color:'+tc.f+'">'+c.tag.toUpperCase()+'</span><span class="evreg">'+c.region+'</span><span class="evint" style="color:'+tc.f+'">'+c.int+'</span></div>'+
-      '<div class="evtit">'+c.title+'</div>'+
-      '<div class="evdesc">'+c.desc.substring(0,75)+'</div>'+
-      '<div class="evkpis"><div class="evkpi"><div class="evkpiv" style="color:'+tc.f+'">'+c.int+'/100</div><div class="evkpil">INT.</div></div><div class="evkpi"><div class="evkpiv" style="color:'+tc.f+'">'+c.alertas+'</div><div class="evkpil">ALERTAS</div></div><div class="evkpi"><div class="evkpiv" style="color:'+tc.f+'">'+c.paises+'</div><div class="evkpil">PAÍSES</div></div></div>'+
-      '<div class="evlinks">'+ml+mx+'</div>';
-    el.addEventListener('click',function(){flyTo(c.id);});
-    cont.appendChild(el);
+      '<div class="fi-row1"><span class="fi-tag" style="background:'+tc.b+';color:'+tc.f+'">'+c.tag.toUpperCase()+'</span>'+
+      '<span class="fi-region" style="color:'+tc.f+'">'+c.name+'</span>'+
+      '<span class="fi-time" style="color:'+tc.f+'">'+c.int+'</span></div>'+
+      '<div class="fi-desc">'+c.desc.substring(0,90)+'</div>'+
+      '<div class="fi-kpis">'+
+        '<div class="fi-kpi"><div class="fi-kv" style="color:'+tc.f+'">'+c.int+'/100</div><div class="fi-kl">INT.</div></div>'+
+        '<div class="fi-kpi"><div class="fi-kv" style="color:'+tc.f+'">'+c.alertas+'</div><div class="fi-kl">ALERTAS</div></div>'+
+        '<div class="fi-kpi"><div class="fi-kv" style="color:'+tc.f+'">'+c.paises+'</div><div class="fi-kl">PAÍSES</div></div>'+
+      '</div>'+
+      '<div class="fi-links">'+ml+mx+'</div>';
+    el.addEventListener('click',function(){flyToConflict(c.id);});
+    el.style.animationDelay=(CONFLICTS.indexOf(c)*.05)+'s';
+    pane.appendChild(el);
   });
 }
 
-// ═══════════════════════════════════════════════
-// INTENSITY
-// ═══════════════════════════════════════════════
-function initIntensity(){
-  var p=document.getElementById('intpane');
-  INTDATA.forEach(function(d){
-    var r=document.createElement('div'); r.className='intr';
-    r.innerHTML='<span class="intn">'+d.r+'</span><div class="intbg"><div class="intb" data-v="'+d.v+'%" style="width:0%;background:'+d.c+'"></div></div><span class="intv">'+d.v+'</span>';
+function buildNoticiasPane(){
+  var pane=document.getElementById('pane-noticias');
+  var all=[];
+  CONFLICTS.forEach(function(c){
+    var news=STATIC_NEWS[c.id]||[];
+    news.forEach(function(n){all.push({n:n,c:c});});
+  });
+  all.sort(function(a,b){return a.n.time.localeCompare(b.n.time);});
+  all.forEach(function(item){
+    var tc=TC[item.c.tag]||TC.tension;
+    var el=document.createElement('div'); el.className='feed-item';
+    el.innerHTML='<div class="fi-row1"><span class="fi-tag" style="background:'+tc.b+';color:'+tc.f+'">'+item.c.tag.toUpperCase()+'</span>'+
+      '<span class="fi-region">'+item.c.name+'</span><span class="fi-time">'+item.n.time+'</span></div>'+
+      '<a class="fi-title" href="'+item.n.url+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">'+item.n.title+'</a>';
+    pane.appendChild(el);
+  });
+}
+
+function buildXGlobalPane(){
+  var pane=document.getElementById('pane-x-global');
+  var intro=document.createElement('div');
+  intro.style.cssText='padding:10px 12px;border-bottom:1px solid var(--border);';
+  intro.innerHTML='<div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:7px;">𝕏 SELECCIONAR CUENTA OSINT</div>'+
+    '<div id="x-global-selector" style="display:flex;flex-wrap:wrap;gap:4px;"></div>';
+  pane.appendChild(intro);
+  var feedArea=document.createElement('div'); feedArea.style.padding='8px 12px';
+  pane.appendChild(feedArea);
+
+  var sel=document.getElementById('x-global-selector');
+  X_GLOBAL.forEach(function(acc,i){
+    var btn=document.createElement('button');
+    btn.style.cssText='font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:10px;cursor:pointer;color:#1d9bf0;border:1px solid #1d9bf050;background:'+(i===0?'#1d9bf025':'#1d9bf010')+';transition:all .15s;';
+    btn.textContent=acc.h;
+    btn.onclick=function(){
+      sel.querySelectorAll('button').forEach(function(b){b.style.background='#1d9bf010';});
+      btn.style.background='#1d9bf025';
+      fetchXFeed('global',acc,feedArea);
+    };
+    sel.appendChild(btn);
+  });
+  if(X_GLOBAL.length>0) fetchXFeed('global',X_GLOBAL[0],feedArea);
+}
+
+function buildIntensityPanel(){
+  var p=document.getElementById('intensity-panel');
+  INTENSITY_DATA.forEach(function(d){
+    var r=document.createElement('div'); r.className='int-row';
+    r.innerHTML='<span class="int-name">'+d.r+'</span>'+
+      '<div class="int-bg"><div class="int-bar" data-v="'+d.v+'" style="background:'+d.c+'"></div></div>'+
+      '<span class="int-val">'+d.v+'</span>';
     p.appendChild(r);
   });
-  setTimeout(function(){document.querySelectorAll('.intb').forEach(function(b){b.style.width=b.getAttribute('data-v');});},800);
+  setTimeout(function(){
+    document.querySelectorAll('.int-bar').forEach(function(b){b.style.width=b.getAttribute('data-v')+'%';});
+  },900);
 }
 
-// ═══════════════════════════════════════════════
-// TICKER
-// ═══════════════════════════════════════════════
 function initTicker(){
-  var inner=document.getElementById('tkinner');
-  var h=TICKERS.map(function(t){return '<span class="tki" onclick="window.open(\''+t.u+'\',\'_blank\')">'+t.t+'</span><span class="tks">◆</span>';}).join('');
+  var inner=document.getElementById('ticker-inner');
+  var h=TICKER_ITEMS.map(function(t){
+    return '<span class="t-item" onclick="window.open(\''+t.u+'\',\'_blank\')">'+t.t+'</span><span class="t-sep">◆</span>';
+  }).join('');
   inner.innerHTML=h+h;
 }
 
-// ═══════════════════════════════════════════════
-// CLOCK
-// ═══════════════════════════════════════════════
-function tick(){
-  var n=new Date();
-  document.getElementById('clock').textContent=String(n.getUTCHours()).padStart(2,'0')+':'+String(n.getUTCMinutes()).padStart(2,'0')+':'+String(n.getUTCSeconds()).padStart(2,'0')+' UTC';
-  if(Math.random()<.002){var e=document.getElementById('alcnt');if(e)e.textContent=+e.textContent+1;}
+function initClock(){
+  function tick(){
+    var n=new Date();
+    document.getElementById('clock').textContent=
+      String(n.getUTCHours()).padStart(2,'0')+':'+
+      String(n.getUTCMinutes()).padStart(2,'0')+':'+
+      String(n.getUTCSeconds()).padStart(2,'0')+' UTC';
+    if(Math.random()<.002){var e=document.getElementById('alcnt');if(e)e.textContent=+e.textContent+1;}
+  }
+  tick(); setInterval(tick,1000);
 }
 
-// ═══════════════════════════════════════════════
-// BOOT
-// ═══════════════════════════════════════════════
-window.addEventListener('load',function(){
-  initMap(); initLive(); initXBlock(); initCards(); initEvents(); initIntensity(); initTicker();
-  tick(); setInterval(tick,1000);
+function initTensionMeter(){
   setTimeout(function(){
-    document.getElementById('tfill').style.width='78%';
-    document.getElementById('tneedle').style.left='78%';
-  },500);
+    document.getElementById('tension-fill').style.width='78%';
+    document.getElementById('tension-needle').style.left='78%';
+  },600);
+}
+
+// ══════════════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════════════
+window.addEventListener('load',function(){
+  initMap();
+  initLayerBar();
+  initYT();
+  buildConflictAccordion();
+  buildSituationsPane();
+  buildNoticiasPane();
+  buildXGlobalPane();
+  buildIntensityPanel();
+  initTicker();
+  initClock();
+  initTensionMeter();
 });
 </script>
 </body>
