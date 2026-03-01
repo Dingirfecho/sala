@@ -9,1081 +9,683 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 :root {
-  --bg-deep:#080b0f; --bg-panel:#0d1117; --bg-card:#111820; --bg-card2:#141c25;
-  --border:#1e2d3d; --border-bright:#2a4060;
-  --accent:#00e5ff; --text-primary:#e8f0f8; --text-secondary:#7a9ab8; --text-dim:#3d5470;
-  --red:#ff3d57; --orange:#ff7c1a; --yellow:#ffd600; --green:#00ff87; --blue:#00e5ff; --purple:#b44fff;
+  --bg:#080b0f; --panel:#0d1117; --card:#111820; --card2:#141c25;
+  --b:#1e2d3d; --bb:#2a4060;
+  --acc:#00e5ff; --t1:#e8f0f8; --t2:#7a9ab8; --t3:#3d5470;
+  --red:#ff3d57; --ora:#ff7c1a; --yel:#ffd600; --grn:#00ff87; --pur:#b44fff;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-html,body{height:100%;overflow:hidden;background:var(--bg-deep);color:var(--text-primary);font-family:'Barlow',sans-serif;font-size:13px;}
-body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,rgba(0,229,255,0.012) 0px,transparent 1px,transparent 3px);pointer-events:none;z-index:9998;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t1);font-family:'Barlow',sans-serif;font-size:13px;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,rgba(0,229,255,0.012) 0,transparent 1px,transparent 3px);pointer-events:none;z-index:9999;}
 
-/* ── TOP BAR ── */
-#topbar{height:44px;background:var(--bg-panel);border-bottom:1px solid var(--border-bright);display:flex;align-items:center;padding:0 16px;gap:14px;z-index:100;flex-shrink:0;}
-#logo{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:22px;letter-spacing:6px;color:var(--accent);text-shadow:0 0 20px rgba(0,229,255,0.5);line-height:1;}
-#logo span{font-size:9px;font-weight:300;letter-spacing:2px;color:var(--text-secondary);display:block;margin-top:-2px;}
-#by-link{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);text-decoration:none;border:1px solid var(--border);padding:2px 10px;border-radius:2px;transition:all .2s;flex-shrink:0;}
-#by-link:hover{color:var(--accent);border-color:var(--accent);box-shadow:0 0 10px rgba(0,229,255,0.2);}
-.sdot{width:6px;height:6px;border-radius:50%;display:inline-block;animation:sdotpulse 2s ease-in-out infinite;}
-.sdot.live{background:var(--red);box-shadow:0 0 8px var(--red);}
-.sdot.ok{background:var(--green);box-shadow:0 0 8px var(--green);}
-@keyframes sdotpulse{0%,100%{opacity:1}50%{opacity:0.3}}
-#status-bar{display:flex;gap:10px;align-items:center;font-family:'Share Tech Mono',monospace;font-size:10px;}
-#clock{font-family:'Share Tech Mono',monospace;font-size:18px;color:var(--accent);text-shadow:0 0 10px rgba(0,229,255,0.4);margin-left:auto;}
+/* TOPBAR */
+#top{height:44px;background:var(--panel);border-bottom:1px solid var(--bb);display:flex;align-items:center;padding:0 14px;gap:12px;flex-shrink:0;z-index:100;}
+#logo{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:21px;letter-spacing:6px;color:var(--acc);text-shadow:0 0 20px rgba(0,229,255,0.5);line-height:1;}
+#logo small{font-size:9px;font-weight:300;letter-spacing:2px;color:var(--t2);display:block;margin-top:-2px;}
+.sdot{width:6px;height:6px;border-radius:50%;display:inline-block;animation:blink 2s infinite;}
+.sdot.r{background:var(--red);box-shadow:0 0 8px var(--red);}
+.sdot.g{background:var(--grn);box-shadow:0 0 8px var(--grn);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+#sbar{display:flex;gap:9px;align-items:center;font-family:'Share Tech Mono',monospace;font-size:10px;}
+#bylink{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--t3);text-decoration:none;border:1px solid var(--b);padding:2px 9px;border-radius:2px;transition:all .2s;flex-shrink:0;}
+#bylink:hover{color:var(--acc);border-color:var(--acc);}
+#clock{font-family:'Share Tech Mono',monospace;font-size:17px;color:var(--acc);text-shadow:0 0 10px rgba(0,229,255,0.4);margin-left:auto;}
 
-/* ── KPI BAR ── */
-#kpi-bar{height:52px;background:var(--bg-panel);border-bottom:1px solid var(--border-bright);display:flex;align-items:stretch;flex-shrink:0;}
-#tension-meter{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 16px;border-right:1px solid var(--border);}
-#tension-label{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px;display:flex;justify-content:space-between;}
-#tension-track{height:6px;background:var(--border);border-radius:3px;overflow:visible;position:relative;}
-#tension-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#00ff87 0%,#ffd600 40%,#ff7c1a 70%,#ff3d57 100%);transition:width 1.5s ease;box-shadow:0 0 10px rgba(255,61,87,0.4);}
-#tension-needle{position:absolute;top:-4px;width:2px;height:14px;background:#fff;border-radius:1px;transition:left 1.5s ease;box-shadow:0 0 6px #fff;}
-.kpi-item{display:flex;flex-direction:column;justify-content:center;align-items:center;border-right:1px solid var(--border);padding:0 14px;gap:1px;cursor:default;transition:background .15s;white-space:nowrap;}
-.kpi-item:last-child{border-right:none;}
-.kpi-item:hover{background:var(--bg-card);}
-.kpi-val{font-family:'Share Tech Mono',monospace;font-size:20px;font-weight:700;line-height:1.1;}
-.kpi-label{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);}
-.kpi-sub{font-family:'Share Tech Mono',monospace;font-size:9px;margin-top:1px;}
+/* KPI BAR */
+#kpibar{height:50px;background:var(--panel);border-bottom:1px solid var(--bb);display:flex;align-items:stretch;flex-shrink:0;}
+#tmeter{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 14px;border-right:1px solid var(--b);}
+#tlab{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:5px;display:flex;justify-content:space-between;}
+#ttrack{height:6px;background:var(--b);border-radius:3px;position:relative;}
+#tfill{height:100%;border-radius:3px;background:linear-gradient(90deg,#00ff87,#ffd600 40%,#ff7c1a 70%,#ff3d57);transition:width 1.5s;box-shadow:0 0 10px rgba(255,61,87,.4);width:0%;}
+#tneedle{position:absolute;top:-4px;width:2px;height:14px;background:#fff;border-radius:1px;transition:left 1.5s;left:0%;}
+.kitem{display:flex;flex-direction:column;justify-content:center;align-items:center;border-right:1px solid var(--b);padding:0 14px;cursor:default;transition:background .15s;white-space:nowrap;}
+.kitem:last-child{border-right:none;}
+.kitem:hover{background:var(--card);}
+.kval{font-family:'Share Tech Mono',monospace;font-size:18px;font-weight:700;line-height:1.1;}
+.klab{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);}
+.ksub{font-family:'Share Tech Mono',monospace;font-size:9px;}
 
-/* ── LAYOUT ── */
-#wrapper{display:flex;flex-direction:column;height:100vh;}
-#main{display:grid;grid-template-columns:300px 1fr 360px;flex:1;overflow:hidden;}
-.panel{background:var(--bg-panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
-.panel-header{padding:8px 12px;border-bottom:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--text-secondary);display:flex;align-items:center;gap:8px;flex-shrink:0;}
-.ph-accent{color:var(--accent);}
+/* MAIN LAYOUT — 3 columns */
+#wrap{display:flex;flex-direction:column;height:100vh;}
+#main{display:grid;grid-template-columns:300px 1fr 360px;flex:1;min-height:0;}
 
-/* ── LEFT PANEL ── */
-/* Channel buttons */
-#live-bar{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg-deep);}
-.live-btn{flex:1;padding:5px 2px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;color:var(--text-dim);border-bottom:2px solid transparent;transition:all .15s;background:transparent;border-top:none;border-left:none;border-right:1px solid var(--border);}
-.live-btn:last-child{border-right:none;}
-.live-btn:hover{color:var(--text-secondary);background:var(--bg-card);}
-.live-btn.active{color:var(--red);border-bottom-color:var(--red);background:rgba(255,61,87,0.06);}
+/* Shared panel */
+.pane{background:var(--panel);border-right:1px solid var(--b);display:flex;flex-direction:column;min-height:0;}
+.phdr{padding:7px 12px;border-bottom:1px solid var(--b);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--t2);display:flex;align-items:center;gap:7px;flex-shrink:0;}
 
-/* YouTube fallback wrapper */
-#live-wrap{flex-shrink:0;background:#000;position:relative;height:169px;}
-#live-wrap iframe{width:100%;height:169px;display:block;border:none;}
-.live-badge{position:absolute;top:6px;left:6px;background:var(--red);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:900;letter-spacing:2px;padding:2px 7px;border-radius:1px;z-index:10;pointer-events:none;animation:sdotpulse 1.5s ease-in-out infinite;}
+/* ═══ LEFT PANEL — explicit height split ═══
+   Top half: live video (fixed ~245px total)
+   Bottom half: X accounts + conflict cards (fills remaining space, itself split)
+*/
+#left{overflow:hidden;display:flex;flex-direction:column;}
 
-/* Note under video */
-#live-note{padding:5px 10px;background:rgba(0,229,255,0.04);border-bottom:1px solid var(--border);font-size:9px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;flex-shrink:0;text-align:center;}
-#live-note a{color:var(--accent);text-decoration:none;}
-#live-note a:hover{text-decoration:underline;}
+/* LIVE section — fixed height, never grows */
+#livesec{flex:0 0 auto;border-bottom:2px solid var(--bb);}
+#chanbtns{display:flex;background:var(--bg);}
+.cbtn{flex:1;padding:4px 2px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;color:var(--t3);border-bottom:2px solid transparent;transition:all .15s;background:transparent;border-top:none;border-left:none;border-right:1px solid var(--b);}
+.cbtn:last-child{border-right:none;}
+.cbtn.on{color:var(--red);border-bottom-color:var(--red);background:rgba(255,61,87,.06);}
+.cbtn:hover{color:var(--t2);}
+#vwrap{background:#000;position:relative;height:148px;}
+#vwrap iframe{width:100%;height:148px;border:none;display:block;}
+.livebadge{position:absolute;top:5px;left:5px;background:var(--red);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:900;letter-spacing:2px;padding:2px 6px;border-radius:1px;z-index:10;pointer-events:none;animation:blink 1.5s infinite;}
+#livelink{padding:5px 10px;background:rgba(0,229,255,.06);font-size:10px;color:var(--t2);font-family:'Share Tech Mono',monospace;text-align:center;border-bottom:1px solid var(--b);}
+#livelink a{color:var(--acc);text-decoration:none;font-weight:bold;}
+#livelink a:hover{text-decoration:underline;}
 
-/* Cards */
-#cards-header{padding:7px 12px;border-bottom:1px solid var(--border);border-top:none;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--text-secondary);display:flex;align-items:center;gap:8px;flex-shrink:0;}
-#cards-scroll{flex:1;overflow-y:auto;padding:6px;}
+/* ── BOTTOM HALF: X block + cards — split 50/50 of remaining space ── */
+#leftbottom{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
 
-.ccard{background:var(--bg-card);border:1px solid var(--border);border-left-width:3px;border-radius:3px;margin-bottom:7px;overflow:hidden;transition:border-color .15s,box-shadow .15s;}
-.ccard:hover{box-shadow:0 0 14px rgba(0,0,0,0.5);}
-.ccard-top{padding:7px 10px;display:flex;align-items:center;gap:7px;}
-.ccard-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;animation:sdotpulse 2.5s ease-in-out infinite;}
-.ccard-name{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;flex:1;line-height:1.2;}
-.ccard-tag{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:1px;padding:1px 5px;border-radius:1px;flex-shrink:0;}
+/* X ACCOUNTS — fixed 160px, always fully visible */
+#xblock{flex:0 0 160px;border-bottom:2px solid rgba(29,155,240,.3);background:rgba(29,155,240,.06);padding:7px 10px;overflow:hidden;}
+#xblock-hdr{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1d9bf0;margin-bottom:5px;display:flex;align-items:center;gap:6px;}
+#xblock-hdr span{font-size:8px;color:var(--t3);font-weight:400;}
+#xtabs{display:flex;gap:3px;margin-bottom:5px;flex-wrap:wrap;}
+.xtab{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px;cursor:pointer;color:var(--t3);border:1px solid var(--b);transition:all .15s;background:transparent;}
+.xtab.on{color:#1d9bf0;border-color:#1d9bf060;background:#1d9bf018;}
+.xtab:hover{color:var(--t2);}
+#xaccounts{display:flex;flex-wrap:wrap;gap:3px;}
+.xacc{font-family:'Share Tech Mono',monospace;font-size:10px;padding:2px 8px;border-radius:10px;text-decoration:none;color:#1d9bf0;border:1px solid #1d9bf050;background:#1d9bf010;transition:all .15s;white-space:nowrap;}
+.xacc:hover{background:#1d9bf025;border-color:#1d9bf0;box-shadow:0 0 8px rgba(29,155,240,.3);}
 
-/* KPIs inside card */
-.ccard-kpis{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--border);}
-.ckpi{display:flex;flex-direction:column;align-items:center;padding:5px 4px;border-right:1px solid var(--border);}
-.ckpi:last-child{border-right:none;}
-.ckpi-val{font-family:'Share Tech Mono',monospace;font-size:13px;font-weight:700;line-height:1;}
-.ckpi-label{font-family:'Barlow Condensed',sans-serif;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin-top:2px;}
+/* CONFLICT CARDS — fills remaining space, scrollable */
+#cardshdr{flex:0 0 auto;padding:6px 12px;border-bottom:1px solid var(--b);font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t2);}
+#cardsscroll{flex:1;overflow-y:auto;padding:6px;min-height:0;}
 
-/* Intensity bar */
-.ccard-bar{height:3px;background:var(--border);}
-.ccard-bar-fill{height:100%;transition:width 1.5s ease;}
+.cc{background:var(--card);border:1px solid var(--b);border-left-width:3px;border-radius:3px;margin-bottom:6px;cursor:pointer;transition:box-shadow .15s;}
+.cc:hover{box-shadow:0 0 14px rgba(0,0,0,.6);}
+.cctop{padding:6px 9px;display:flex;align-items:center;gap:6px;}
+.ccdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;animation:blink 2.5s infinite;}
+.ccname{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;flex:1;}
+.cctag{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:1px;padding:1px 5px;border-radius:1px;}
+.cckpis{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--b);}
+.cck{display:flex;flex-direction:column;align-items:center;padding:4px;border-right:1px solid var(--b);}
+.cck:last-child{border-right:none;}
+.cckv{font-family:'Share Tech Mono',monospace;font-size:12px;font-weight:700;}
+.cckl{font-family:'Barlow Condensed',sans-serif;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-top:1px;}
+.ccbar{height:3px;background:var(--b);}
+.ccbarf{height:100%;transition:width 1.5s;}
+.ccsec{padding:5px 8px 4px;border-top:1px solid var(--b);}
+.ccsecl{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:4px;}
+.cclinks{display:flex;flex-wrap:wrap;gap:3px;}
+.cclink{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px;text-decoration:none;border:1px solid;transition:filter .15s;}
+.cclink:hover{filter:brightness(1.5);}
 
-/* Link chips — TWO ROWS: media/trackers + X accounts */
-.ccard-section{padding:5px 8px 3px;border-top:1px solid var(--border);}
-.ccard-xsection{background:rgba(29,155,240,0.04);border-top:1px solid rgba(29,155,240,0.2);}
-.ccard-section-label{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;}
-.ccard-links{display:flex;flex-wrap:wrap;gap:3px;}
-.clink{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px;text-decoration:none;border:1px solid;transition:filter .15s;flex-shrink:0;white-space:nowrap;}
-.clink:hover{filter:brightness(1.4);}
-.clink.x-account{border-radius:10px;} /* pill for X accounts */
-
-/* ── CENTER MAP ── */
-#center{display:flex;flex-direction:column;overflow:hidden;}
-#tag-bar{padding:7px 12px;background:var(--bg-panel);border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:5px;align-items:center;flex-shrink:0;}
-.tag-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-right:4px;}
-.tag-btn{padding:3px 10px;border-radius:2px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:1px;cursor:pointer;border:1px solid;transition:all .15s;background:transparent;text-transform:uppercase;}
-.tag-btn[data-tag="war"]    {border-color:#ff3d57;color:#ff3d57;}
-.tag-btn[data-tag="war"].active    {background:#ff3d57;color:#000;box-shadow:0 0 12px rgba(255,61,87,0.4);}
-.tag-btn[data-tag="crisis"] {border-color:#ff7c1a;color:#ff7c1a;}
-.tag-btn[data-tag="crisis"].active {background:#ff7c1a;color:#000;box-shadow:0 0 12px rgba(255,124,26,0.4);}
-.tag-btn[data-tag="tension"]{border-color:#ffd600;color:#ffd600;}
-.tag-btn[data-tag="tension"].active{background:#ffd600;color:#000;box-shadow:0 0 12px rgba(255,214,0,0.4);}
-.tag-btn[data-tag="naval"]  {border-color:#00e5ff;color:#00e5ff;}
-.tag-btn[data-tag="naval"].active  {background:#00e5ff;color:#000;box-shadow:0 0 12px rgba(0,229,255,0.4);}
-.tag-btn[data-tag="air"]    {border-color:#b44fff;color:#b44fff;}
-.tag-btn[data-tag="air"].active    {background:#b44fff;color:#000;box-shadow:0 0 12px rgba(180,79,255,0.4);}
-.tag-btn[data-tag="cyber"]  {border-color:#00ff87;color:#00ff87;}
-.tag-btn[data-tag="cyber"].active  {background:#00ff87;color:#000;box-shadow:0 0 12px rgba(0,255,135,0.4);}
-.tag-btn[data-tag="nuclear"]{border-color:#ff9100;color:#ff9100;}
-.tag-btn[data-tag="nuclear"].active{background:#ff9100;color:#000;box-shadow:0 0 12px rgba(255,145,0,0.4);}
-
-#map-container{flex:1;position:relative;overflow:hidden;}
-#leaflet-map{width:100%;height:100%;}
-.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(0.7) saturate(0.6) contrast(1.1);}
+/* ═══ CENTER MAP ═══ */
+#center{display:flex;flex-direction:column;min-height:0;}
+#tagbar{padding:6px 12px;background:var(--panel);border-bottom:1px solid var(--b);display:flex;flex-wrap:wrap;gap:4px;align-items:center;flex-shrink:0;}
+.taglbl{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-right:4px;}
+.tbtn{padding:3px 9px;border-radius:2px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:1px;cursor:pointer;border:1px solid;transition:all .15s;background:transparent;text-transform:uppercase;}
+.tbtn[data-t="war"]{border-color:#ff3d57;color:#ff3d57;}.tbtn[data-t="war"].on{background:#ff3d57;color:#000;box-shadow:0 0 12px rgba(255,61,87,.4);}
+.tbtn[data-t="crisis"]{border-color:#ff7c1a;color:#ff7c1a;}.tbtn[data-t="crisis"].on{background:#ff7c1a;color:#000;box-shadow:0 0 12px rgba(255,124,26,.4);}
+.tbtn[data-t="tension"]{border-color:#ffd600;color:#ffd600;}.tbtn[data-t="tension"].on{background:#ffd600;color:#000;box-shadow:0 0 12px rgba(255,214,0,.4);}
+.tbtn[data-t="naval"]{border-color:#00e5ff;color:#00e5ff;}.tbtn[data-t="naval"].on{background:#00e5ff;color:#000;box-shadow:0 0 12px rgba(0,229,255,.4);}
+.tbtn[data-t="air"]{border-color:#b44fff;color:#b44fff;}.tbtn[data-t="air"].on{background:#b44fff;color:#000;box-shadow:0 0 12px rgba(180,79,255,.4);}
+.tbtn[data-t="cyber"]{border-color:#00ff87;color:#00ff87;}.tbtn[data-t="cyber"].on{background:#00ff87;color:#000;box-shadow:0 0 12px rgba(0,255,135,.4);}
+.tbtn[data-t="nuclear"]{border-color:#ff9100;color:#ff9100;}.tbtn[data-t="nuclear"].on{background:#ff9100;color:#000;box-shadow:0 0 12px rgba(255,145,0,.4);}
+#mapbox{flex:1;position:relative;min-height:0;}
+#map{width:100%;height:100%;}
+.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.7) saturate(.6) contrast(1.1);}
 .leaflet-control-attribution{display:none;}
-.leaflet-control-zoom a{background:var(--bg-card) !important;color:var(--accent) !important;border-color:var(--border-bright) !important;}
-
-/* Popup styles */
-.leaflet-popup-content-wrapper{background:#0d1117 !important;border:1px solid #2a4060 !important;border-radius:3px !important;color:#e8f0f8 !important;box-shadow:0 0 24px rgba(0,0,0,0.95) !important;font-family:'Barlow',sans-serif !important;}
+.leaflet-control-zoom a{background:var(--card) !important;color:var(--acc) !important;border-color:var(--bb) !important;}
+.leaflet-popup-content-wrapper{background:#0d1117 !important;border:1px solid #2a4060 !important;border-radius:3px !important;color:#e8f0f8 !important;box-shadow:0 0 24px rgba(0,0,0,.95) !important;font-family:'Barlow',sans-serif !important;}
 .leaflet-popup-tip{background:#0d1117 !important;}
-.leaflet-popup-content{margin:10px 12px !important;font-size:12px !important;min-width:260px;}
+.leaflet-popup-content{margin:10px 12px !important;font-size:12px !important;min-width:270px;}
 .leaflet-popup-close-button{color:#7a9ab8 !important;font-size:18px !important;top:4px !important;right:6px !important;}
+.pt{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;margin-bottom:4px;}
+.ptag{display:inline-block;padding:1px 7px;border-radius:2px;font-size:10px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;margin-bottom:6px;}
+.pdesc{color:#7a9ab8;line-height:1.5;font-size:11px;margin-bottom:8px;}
+.pkpis{display:flex;gap:5px;margin-bottom:8px;}
+.pkpi{flex:1;background:#111820;border:1px solid #1e2d3d;border-radius:2px;padding:5px 2px;text-align:center;}
+.pkpiv{font-family:'Share Tech Mono',monospace;font-size:13px;font-weight:700;}
+.pkpil{font-family:'Barlow Condensed',sans-serif;font-size:8px;color:#3d5470;letter-spacing:1px;text-transform:uppercase;}
+.psec{margin-bottom:6px;}
+.psecl{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#3d5470;margin-bottom:4px;}
+.plinks{display:flex;flex-wrap:wrap;gap:3px;}
+.plink{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px;text-decoration:none;border:1px solid;transition:filter .15s;}
+.plink:hover{filter:brightness(1.5);}
+.pxlink{font-family:'Share Tech Mono',monospace;font-size:10px;padding:2px 8px;border-radius:10px;text-decoration:none;color:#1d9bf0;border:1px solid #1d9bf050;background:#1d9bf010;transition:all .15s;}
+.pxlink:hover{background:#1d9bf025;}
+#mapleg{position:absolute;bottom:12px;right:10px;background:rgba(13,17,23,.92);border:1px solid var(--bb);border-radius:3px;padding:8px 12px;z-index:1000;pointer-events:none;}
+.legl{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:6px;}
+.legr{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.legd{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.legn{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--t2);}
 
-.p-title{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;margin-bottom:4px;}
-.p-tag{display:inline-block;padding:1px 7px;border-radius:2px;font-size:10px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;margin-bottom:6px;}
-.p-desc{color:#7a9ab8;line-height:1.5;font-size:11px;margin-bottom:8px;}
-.p-kpis{display:flex;gap:5px;margin-bottom:8px;}
-.p-kpi{flex:1;background:#111820;border:1px solid #1e2d3d;border-radius:2px;padding:5px 2px;text-align:center;}
-.p-kpi-val{font-family:'Share Tech Mono',monospace;font-size:13px;font-weight:700;}
-.p-kpi-label{font-family:'Barlow Condensed',sans-serif;font-size:8px;color:#3d5470;letter-spacing:1px;text-transform:uppercase;}
-/* Popup link sections */
-.p-section{margin-bottom:6px;}
-.p-section-label{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#3d5470;margin-bottom:4px;}
-.p-links{display:flex;flex-wrap:wrap;gap:3px;}
-.p-link{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px;text-decoration:none;border:1px solid;transition:filter .15s;}
-.p-link:hover{filter:brightness(1.5);}
-.p-link.xl{border-radius:10px;}
+/* ═══ RIGHT PANEL ═══ */
+#right{border-left:1px solid var(--b);border-right:none;overflow:hidden;display:flex;flex-direction:column;min-height:0;}
+#evlist{flex:1;overflow-y:auto;}
+.ev{padding:8px 12px;border-bottom:1px solid var(--b);cursor:pointer;transition:background .1s;}
+.ev:hover{background:var(--card);}
+.evr1{display:flex;align-items:center;gap:5px;margin-bottom:2px;}
+.evtag{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:1px 5px;border-radius:1px;}
+.evreg{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--t2);flex:1;}
+.evint{font-family:'Share Tech Mono',monospace;font-size:11px;font-weight:700;}
+.evtit{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;line-height:1.3;margin-bottom:2px;}
+.evdesc{font-size:10px;color:var(--t2);line-height:1.4;margin-bottom:3px;}
+.evkpis{display:flex;gap:4px;margin-bottom:3px;}
+.evkpi{flex:1;background:var(--card2);border:1px solid var(--b);border-radius:2px;padding:2px 4px;text-align:center;}
+.evkpiv{font-family:'Share Tech Mono',monospace;font-size:11px;font-weight:700;}
+.evkpil{font-family:'Barlow Condensed',sans-serif;font-size:8px;letter-spacing:1px;color:var(--t3);text-transform:uppercase;}
+.evlinks{display:flex;flex-wrap:wrap;gap:3px;}
+.evlink{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;padding:1px 6px;border-radius:2px;text-decoration:none;border:1px solid;transition:filter .15s;}
+.evlink:hover{filter:brightness(1.5);}
+#intpane{padding:9px 12px;border-top:1px solid var(--b);background:var(--card);flex-shrink:0;}
+.intlbl{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:7px;}
+.intr{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
+.intn{font-family:'Barlow Condensed',sans-serif;font-size:11px;width:108px;color:var(--t2);flex-shrink:0;}
+.intbg{flex:1;height:4px;background:var(--b);border-radius:2px;overflow:hidden;}
+.intb{height:100%;border-radius:2px;transition:width 1.2s;}
+.intv{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--t3);width:22px;text-align:right;}
 
-/* Map legend */
-#map-legend{position:absolute;bottom:12px;right:10px;background:rgba(13,17,23,0.92);border:1px solid var(--border-bright);border-radius:3px;padding:8px 12px;z-index:1000;pointer-events:none;backdrop-filter:blur(4px);}
-.leg-title{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:6px;}
-.leg-row{display:flex;align-items:center;gap:7px;margin-bottom:4px;}
-.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.leg-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--text-secondary);}
-
-/* ── RIGHT PANEL ── */
-#right-panel{border-left:1px solid var(--border);border-right:none;overflow:hidden;display:flex;flex-direction:column;}
-#events-list{flex:1;overflow-y:auto;}
-.event-item{padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
-.event-item:hover{background:var(--bg-card);}
-.ei-row1{display:flex;align-items:center;gap:6px;margin-bottom:3px;}
-.ei-tag{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:1px 5px;border-radius:1px;}
-.ei-region{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--text-secondary);flex:1;}
-.ei-int{font-family:'Share Tech Mono',monospace;font-size:11px;font-weight:700;}
-.ei-title{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;line-height:1.3;margin-bottom:2px;}
-.ei-desc{font-size:10px;color:var(--text-secondary);line-height:1.4;margin-bottom:4px;}
-.ei-kpis{display:flex;gap:5px;margin-bottom:4px;}
-.ei-kpi{flex:1;background:var(--bg-card2);border:1px solid var(--border);border-radius:2px;padding:3px 4px;text-align:center;}
-.ei-kpi-val{font-family:'Share Tech Mono',monospace;font-size:11px;font-weight:700;}
-.ei-kpi-label{font-family:'Barlow Condensed',sans-serif;font-size:8px;letter-spacing:1px;color:var(--text-dim);text-transform:uppercase;}
-/* mini link row per event */
-.ei-links{display:flex;flex-wrap:wrap;gap:3px;}
-.ei-link{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;padding:1px 6px;border-radius:2px;text-decoration:none;border:1px solid;transition:filter .15s;}
-.ei-link:hover{filter:brightness(1.5);}
-
-#intensity-panel{padding:10px 12px;border-top:1px solid var(--border);background:var(--bg-card);flex-shrink:0;}
-.intensity-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:8px;}
-.intensity-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
-.ir-name{font-family:'Barlow Condensed',sans-serif;font-size:11px;width:110px;color:var(--text-secondary);flex-shrink:0;}
-.ir-bar-bg{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
-.ir-bar{height:100%;border-radius:2px;transition:width 1.2s ease;}
-.ir-val{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);width:24px;text-align:right;flex-shrink:0;}
-
-/* ── TICKER ── */
-#ticker{height:28px;background:rgba(8,11,15,0.97);border-top:1px solid var(--border-bright);display:flex;align-items:center;overflow:hidden;flex-shrink:0;z-index:200;}
-#ticker-label{padding:0 12px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:900;letter-spacing:3px;color:#000;background:var(--red);height:100%;display:flex;align-items:center;flex-shrink:0;box-shadow:4px 0 12px rgba(255,61,87,0.3);}
-#ticker-track{flex:1;overflow:hidden;position:relative;height:100%;}
-#ticker-inner{position:absolute;white-space:nowrap;display:flex;align-items:center;height:100%;animation:tickerScroll 120s linear infinite;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-secondary);}
-@keyframes tickerScroll{0%{transform:translateX(100vw)}100%{transform:translateX(-100%)}}
-.ticker-item{margin-right:50px;cursor:pointer;}
-.ticker-item:hover{color:var(--accent);}
-.ticker-sep{color:var(--red);margin-right:50px;}
+/* TICKER */
+#ticker{height:27px;background:rgba(8,11,15,.97);border-top:1px solid var(--bb);display:flex;align-items:center;overflow:hidden;flex-shrink:0;z-index:200;}
+#tklbl{padding:0 12px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:900;letter-spacing:3px;color:#000;background:var(--red);height:100%;display:flex;align-items:center;flex-shrink:0;box-shadow:4px 0 12px rgba(255,61,87,.3);}
+#tktrack{flex:1;overflow:hidden;position:relative;height:100%;}
+#tkinner{position:absolute;white-space:nowrap;display:flex;align-items:center;height:100%;animation:scroll 120s linear infinite;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--t2);}
+@keyframes scroll{0%{transform:translateX(100vw)}100%{transform:translateX(-100%)}}
+.tki{margin-right:50px;cursor:pointer;}.tki:hover{color:var(--acc);}
+.tks{color:var(--red);margin-right:50px;}
 ::-webkit-scrollbar{width:4px;}
-::-webkit-scrollbar-track{background:var(--bg-deep);}
-::-webkit-scrollbar-thumb{background:var(--border-bright);border-radius:2px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--bb);border-radius:2px;}
 </style>
 </head>
 <body>
-<div id="wrapper">
+<div id="wrap">
 
 <!-- TOP BAR -->
-<div id="topbar">
-  <div id="logo">SALA<span>Siguiendo Atentamente Los Acontecimientos</span></div>
-  <div id="status-bar">
-    <span class="sdot live"></span>
-    <span style="color:var(--red);font-size:10px;letter-spacing:1px;">LIVE</span>
-    <span style="color:var(--text-dim)">|</span>
-    <span class="sdot ok"></span>
-    <span style="color:var(--text-dim);font-size:10px;">FEEDS OK</span>
-    <span style="color:var(--text-dim)">|</span>
-    <span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--red);">⬤ 23 ACTIVOS</span>
+<div id="top">
+  <div id="logo">SALA<small>Siguiendo Atentamente Los Acontecimientos</small></div>
+  <div id="sbar">
+    <span class="sdot r"></span><span style="color:var(--red);font-size:10px;letter-spacing:1px;">LIVE</span>
+    <span style="color:var(--t3)">|</span>
+    <span class="sdot g"></span><span style="color:var(--t3);font-size:10px;">FEEDS OK</span>
+    <span style="color:var(--t3)">|</span>
+    <span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--red);">⬤ 18 ACTIVOS</span>
   </div>
-  <a id="by-link" href="https://www.fedeandino.com" target="_blank" rel="noopener">✦ fedeandino.com</a>
+  <a id="bylink" href="https://www.fedeandino.com" target="_blank" rel="noopener">✦ fedeandino.com</a>
   <div id="clock">--:--:-- UTC</div>
 </div>
 
 <!-- KPI BAR -->
-<div id="kpi-bar">
-  <div id="tension-meter">
-    <div id="tension-label">
-      <span>// ÍNDICE DE TENSIÓN GLOBAL</span>
-      <span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:#ff7c1a;">78 / 100</span>
-    </div>
-    <div id="tension-track">
-      <div id="tension-fill" style="width:0%"></div>
-      <div id="tension-needle" style="left:0%"></div>
-    </div>
+<div id="kpibar">
+  <div id="tmeter">
+    <div id="tlab"><span>// ÍNDICE DE TENSIÓN GLOBAL</span><span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--ora);">78 / 100</span></div>
+    <div id="ttrack"><div id="tfill"></div><div id="tneedle"></div></div>
   </div>
-  <div class="kpi-item">
-    <div class="kpi-val" style="color:#ff3d57">23</div>
-    <div class="kpi-label">Conflictos</div>
-    <div class="kpi-sub" style="color:#ff3d57">+2 este mes</div>
-  </div>
-  <div class="kpi-item">
-    <div class="kpi-val" style="color:#ffd600">47</div>
-    <div class="kpi-label">Países Involuc.</div>
-    <div class="kpi-sub" style="color:#ffd600">▲ +3 vs sem.</div>
-  </div>
-  <div class="kpi-item">
-    <div class="kpi-val" style="color:#00ff87" id="alert-count">14</div>
-    <div class="kpi-label">Alertas Hoy</div>
-    <div class="kpi-sub" style="color:var(--text-dim)">últimas 6h</div>
-  </div>
-  <div class="kpi-item">
-    <div class="kpi-val" style="color:#00e5ff">892</div>
-    <div class="kpi-label">Buques Desv.</div>
-    <div class="kpi-sub" style="color:#00e5ff">Mar Rojo YTD</div>
-  </div>
+  <div class="kitem"><div class="kval" style="color:var(--red)">23</div><div class="klab">Conflictos</div><div class="ksub" style="color:var(--red)">+2 mes</div></div>
+  <div class="kitem"><div class="kval" style="color:var(--yel)">47</div><div class="klab">Países Involuc.</div><div class="ksub" style="color:var(--yel)">▲+3 sem</div></div>
+  <div class="kitem"><div class="kval" style="color:var(--grn)" id="alcnt">14</div><div class="klab">Alertas Hoy</div><div class="ksub" style="color:var(--t3)">últimas 6h</div></div>
+  <div class="kitem"><div class="kval" style="color:var(--acc)">892</div><div class="klab">Buques Desv.</div><div class="ksub" style="color:var(--acc)">Mar Rojo YTD</div></div>
 </div>
 
 <!-- MAIN -->
 <div id="main">
 
-  <!-- LEFT: LIVE + CARDS -->
-  <div class="panel" id="left-panel">
-    <div class="panel-header"><span style="color:var(--red)">●</span> TRANSMISIÓN EN VIVO</div>
-    <div id="live-bar"></div>
-    <div id="live-wrap">
-      <div class="live-badge">● EN VIVO</div>
-      <iframe id="live-iframe" src="" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe>
+  <!-- LEFT PANEL -->
+  <div class="pane" id="left">
+
+    <!-- LIVE VIDEO -->
+    <div id="livesec">
+      <div class="phdr"><span style="color:var(--red)">●</span> TRANSMISIÓN EN VIVO</div>
+      <div id="chanbtns"></div>
+      <div id="vwrap">
+        <div class="livebadge">● EN VIVO</div>
+        <iframe id="vframe" src="" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+      </div>
+      <div id="livelink">Si no carga: <a id="vdirect" href="" target="_blank">abrir en YouTube ↗</a></div>
     </div>
-    <div id="live-note">
-      Si el video no carga: <a id="live-direct" href="" target="_blank" rel="noopener">abrir canal en YouTube ↗</a>
+
+    <!-- BOTTOM HALF: X accounts + conflict cards -->
+    <div id="leftbottom">
+
+    <!-- X ACCOUNTS — ALWAYS VISIBLE, FIXED 160px -->
+    <div id="xblock">
+      <div id="xblock-hdr">
+        𝕏 CUENTAS OSINT EN X
+        <span>— click para abrir perfil</span>
+      </div>
+      <div id="xtabs"></div>
+      <div id="xaccounts"></div>
     </div>
-    <div id="cards-header"><span class="ph-accent">◈</span> CONFLICTOS POR ZONA — click en links para abrir</div>
-    <div id="cards-scroll"></div>
+
+    <!-- CONFLICT CARDS -->
+    <div id="cardshdr"><span style="color:var(--acc)">◈</span> CONFLICTOS POR ZONA — fuentes por conflicto</div>
+    <div id="cardsscroll"></div>
+
+    </div><!-- /leftbottom -->
+
   </div>
 
-  <!-- CENTER: MAP -->
+  <!-- CENTER MAP -->
   <div id="center">
-    <div id="tag-bar">
-      <span class="tag-label">FILTROS:</span>
-      <button class="tag-btn active" data-tag="war"     onclick="toggleTag(this)">⬤ GUERRA</button>
-      <button class="tag-btn active" data-tag="crisis"  onclick="toggleTag(this)">⬤ CRISIS</button>
-      <button class="tag-btn active" data-tag="tension" onclick="toggleTag(this)">⬤ TENSIÓN</button>
-      <button class="tag-btn active" data-tag="naval"   onclick="toggleTag(this)">◈ NAVAL</button>
-      <button class="tag-btn active" data-tag="air"     onclick="toggleTag(this)">◈ AÉREO</button>
-      <button class="tag-btn active" data-tag="cyber"   onclick="toggleTag(this)">◈ CYBER</button>
-      <button class="tag-btn active" data-tag="nuclear" onclick="toggleTag(this)">☢ NUCLEAR</button>
+    <div id="tagbar">
+      <span class="taglbl">FILTROS:</span>
+      <button class="tbtn on" data-t="war"     onclick="toggleTag(this)">⬤ GUERRA</button>
+      <button class="tbtn on" data-t="crisis"  onclick="toggleTag(this)">⬤ CRISIS</button>
+      <button class="tbtn on" data-t="tension" onclick="toggleTag(this)">⬤ TENSIÓN</button>
+      <button class="tbtn on" data-t="naval"   onclick="toggleTag(this)">◈ NAVAL</button>
+      <button class="tbtn on" data-t="air"     onclick="toggleTag(this)">◈ AÉREO</button>
+      <button class="tbtn on" data-t="cyber"   onclick="toggleTag(this)">◈ CYBER</button>
+      <button class="tbtn on" data-t="nuclear" onclick="toggleTag(this)">☢ NUCLEAR</button>
     </div>
-    <div id="map-container">
-      <div id="leaflet-map"></div>
-      <div id="map-legend">
-        <div class="leg-title">// LEYENDA</div>
-        <div class="leg-row"><div class="leg-dot" style="background:#ff3d57;box-shadow:0 0 6px #ff3d57"></div><span class="leg-label">GUERRA</span></div>
-        <div class="leg-row"><div class="leg-dot" style="background:#ff7c1a;box-shadow:0 0 6px #ff7c1a"></div><span class="leg-label">CRISIS</span></div>
-        <div class="leg-row"><div class="leg-dot" style="background:#ffd600;box-shadow:0 0 6px #ffd600"></div><span class="leg-label">TENSIÓN</span></div>
-        <div class="leg-row"><div class="leg-dot" style="background:#00e5ff;box-shadow:0 0 6px #00e5ff;border-radius:2px"></div><span class="leg-label">NAVAL</span></div>
-        <div class="leg-row"><div class="leg-dot" style="background:#b44fff;box-shadow:0 0 6px #b44fff;border-radius:2px"></div><span class="leg-label">AÉREO</span></div>
-        <div class="leg-row"><div class="leg-dot" style="background:#00ff87;box-shadow:0 0 6px #00ff87;border-radius:2px"></div><span class="leg-label">CYBER</span></div>
-        <div class="leg-row"><div class="leg-dot" style="background:#ff9100;box-shadow:0 0 6px #ff9100"></div><span class="leg-label">NUCLEAR</span></div>
+    <div id="mapbox">
+      <div id="map"></div>
+      <div id="mapleg">
+        <div class="legl">// LEYENDA</div>
+        <div class="legr"><div class="legd" style="background:#ff3d57;box-shadow:0 0 6px #ff3d57"></div><span class="legn">GUERRA</span></div>
+        <div class="legr"><div class="legd" style="background:#ff7c1a;box-shadow:0 0 6px #ff7c1a"></div><span class="legn">CRISIS</span></div>
+        <div class="legr"><div class="legd" style="background:#ffd600;box-shadow:0 0 6px #ffd600"></div><span class="legn">TENSIÓN</span></div>
+        <div class="legr"><div class="legd" style="background:#00e5ff;box-shadow:0 0 6px #00e5ff;border-radius:2px"></div><span class="legn">NAVAL</span></div>
+        <div class="legr"><div class="legd" style="background:#b44fff;box-shadow:0 0 6px #b44fff;border-radius:2px"></div><span class="legn">AÉREO</span></div>
+        <div class="legr"><div class="legd" style="background:#00ff87;box-shadow:0 0 6px #00ff87;border-radius:2px"></div><span class="legn">CYBER</span></div>
+        <div class="legr"><div class="legd" style="background:#ff9100;box-shadow:0 0 6px #ff9100"></div><span class="legn">NUCLEAR</span></div>
       </div>
     </div>
   </div>
 
-  <!-- RIGHT: SITUATIONS -->
-  <div class="panel" id="right-panel">
-    <div class="panel-header">
-      <span class="ph-accent">◈</span> SITUACIONES ACTIVAS
-      <span style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim)" id="event-count"></span>
-    </div>
-    <div id="events-list"></div>
-    <div id="intensity-panel">
-      <div class="intensity-label">// TENSIÓN POR REGIÓN</div>
-    </div>
+  <!-- RIGHT PANEL -->
+  <div class="pane" id="right">
+    <div class="phdr"><span style="color:var(--acc)">◈</span> SITUACIONES ACTIVAS<span style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--t3)" id="evcnt"></span></div>
+    <div id="evlist"></div>
+    <div id="intpane"><div class="intlbl">// TENSIÓN POR REGIÓN</div></div>
   </div>
 
-</div>
+</div><!-- /main -->
 
 <!-- TICKER -->
 <div id="ticker">
-  <div id="ticker-label">BREAKING</div>
-  <div id="ticker-track"><div id="ticker-inner"></div></div>
+  <div id="tklbl">BREAKING</div>
+  <div id="tktrack"><div id="tkinner"></div></div>
 </div>
 
-</div>
+</div><!-- /wrap -->
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// ================================================================
-// CHANNELS  — YouTube live channel IDs (stable embed URLs)
-// ================================================================
-// YouTube live: usar video IDs permanentes de los streams 24/7 de cada canal
-// Estos son los IDs de video de los livestreams continuos (no IDs de canal)
-var CHANNELS = [
-  {
-    label: 'Al Jazeera',
-    embed: 'https://www.youtube.com/embed/F4mB3_mOf1k?autoplay=1&mute=1&rel=0&modestbranding=1',
-    direct: 'https://www.youtube.com/watch?v=F4mB3_mOf1k'
-  },
-  {
-    label: 'France 24 EN',
-    embed: 'https://www.youtube.com/embed/h3MuIUNCCLI?autoplay=1&mute=1&rel=0&modestbranding=1',
-    direct: 'https://www.youtube.com/watch?v=h3MuIUNCCLI'
-  },
-  {
-    label: 'DW News',
-    embed: 'https://www.youtube.com/embed/mSh1TaTQEts?autoplay=1&mute=1&rel=0&modestbranding=1',
-    direct: 'https://www.youtube.com/watch?v=mSh1TaTQEts'
-  },
-  {
-    label: 'Euronews EN',
-    embed: 'https://www.youtube.com/embed/RHHXkRpuaHk?autoplay=1&mute=1&rel=0&modestbranding=1',
-    direct: 'https://www.youtube.com/watch?v=RHHXkRpuaHk'
-  },
-  {
-    label: 'Bloomberg',
-    embed: 'https://www.youtube.com/embed/dp8PhLsUcFE?autoplay=1&mute=1&rel=0&modestbranding=1',
-    direct: 'https://www.youtube.com/watch?v=dp8PhLsUcFE'
-  },
+// ═══════════════════════════════════════════════
+// CHANNELS — YouTube 24/7 live stream video IDs
+// These are the permanent stream IDs (not channel IDs)
+// If a stream is down, the direct link still works
+// ═══════════════════════════════════════════════
+var CH = [
+  { n:'Al Jazeera', id:'F4mB3_mOf1k' },  // AJ English 24/7 live
+  { n:'France 24',  id:'l8tWpViTkGs' },  // France 24 EN
+  { n:'DW News',    id:'mSh1TaTQEts' },  // Deutsche Welle
+  { n:'Euronews',   id:'RHHXkRpuaHk' },  // Euronews English
+  { n:'Bloomberg',  id:'dp8PhLsUcFE' },  // Bloomberg Television
 ];
 
-// ================================================================
-// TAG COLOR PALETTE
-// ================================================================
+// ═══════════════════════════════════════════════
+// X ACCOUNTS grouped by topic
+// ═══════════════════════════════════════════════
+var XGROUPS = [
+  { label:'UCRANIA', accounts:[
+    {n:'@RALee85',       u:'https://x.com/RALee85'},
+    {n:'@UAWeapons',     u:'https://x.com/UAWeapons'},
+    {n:'@War_Mapper',    u:'https://x.com/War_Mapper'},
+    {n:'@oryxspioenkop', u:'https://x.com/oryxspioenkop'},
+    {n:'@GeoConfirmed',  u:'https://x.com/GeoConfirmed'},
+    {n:'@KofmanMichael', u:'https://x.com/KofmanMichael'},
+  ]},
+  { label:'MENA', accounts:[
+    {n:'@MiddleEastEye',  u:'https://x.com/MiddleEastEye'},
+    {n:'@HawzhinOzodi',   u:'https://x.com/HawzhinOzodi'},
+    {n:'@IntelCrab',      u:'https://x.com/IntelCrab'},
+    {n:'@TankerTrackers', u:'https://x.com/TankerTrackers'},
+    {n:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
+  ]},
+  { label:'GLOBAL', accounts:[
+    {n:'@IntelCrab',      u:'https://x.com/IntelCrab'},
+    {n:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
+    {n:'@Conflicts',      u:'https://x.com/Conflicts'},
+    {n:'@MT_Anderson',    u:'https://x.com/MT_Anderson'},
+    {n:'@CalibreObscura', u:'https://x.com/CalibreObscura'},
+    {n:'@Intelslava',     u:'https://x.com/intelslava'},
+  ]},
+  { label:'NAVAL', accounts:[
+    {n:'@TankerTrackers', u:'https://x.com/TankerTrackers'},
+    {n:'@IntelCrab',      u:'https://x.com/IntelCrab'},
+  ]},
+  { label:'CYBER', accounts:[
+    {n:'@IntelCrab',      u:'https://x.com/IntelCrab'},
+    {n:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
+    {n:'@GeoConfirmed',   u:'https://x.com/GeoConfirmed'},
+  ]},
+];
+
+// ═══════════════════════════════════════════════
+// TAG COLORS
+// ═══════════════════════════════════════════════
 var TC = {
-  war:    {fill:'#ff3d57', glow:'rgba(255,61,87,0.5)',  bg:'#2a0009'},
-  crisis: {fill:'#ff7c1a', glow:'rgba(255,124,26,0.5)', bg:'#2a1400'},
-  tension:{fill:'#ffd600', glow:'rgba(255,214,0,0.5)',  bg:'#2a2400'},
-  naval:  {fill:'#00e5ff', glow:'rgba(0,229,255,0.5)',  bg:'#002a30'},
-  air:    {fill:'#b44fff', glow:'rgba(180,79,255,0.5)', bg:'#1a0a2a'},
-  cyber:  {fill:'#00ff87', glow:'rgba(0,255,135,0.5)',  bg:'#002a14'},
-  nuclear:{fill:'#ff9100', glow:'rgba(255,145,0,0.5)',  bg:'#2a1900'},
+  war:    {f:'#ff3d57', g:'rgba(255,61,87,.5)',  b:'#2a0009'},
+  crisis: {f:'#ff7c1a', g:'rgba(255,124,26,.5)', b:'#2a1400'},
+  tension:{f:'#ffd600', g:'rgba(255,214,0,.5)',  b:'#2a2400'},
+  naval:  {f:'#00e5ff', g:'rgba(0,229,255,.5)',  b:'#002a30'},
+  air:    {f:'#b44fff', g:'rgba(180,79,255,.5)', b:'#1a0a2a'},
+  cyber:  {f:'#00ff87', g:'rgba(0,255,135,.5)',  b:'#002a14'},
+  nuclear:{f:'#ff9100', g:'rgba(255,145,0,.5)',  b:'#2a1900'},
 };
 
-// ================================================================
-// CONFLICT DATA  (each has map position + popup links)
-// ================================================================
-var conflicts = [
-  {
-    id:1, title:'Guerra Rusia-Ucrania', region:'Europa del Este', lat:49.0, lng:32.0,
-    tag:'war', intensity:95, kpis:{int:95, alertas:8, paises:50},
+// ═══════════════════════════════════════════════
+// CONFLICTS
+// ═══════════════════════════════════════════════
+var CF = [
+  { id:1,  title:'Guerra Rusia-Ucrania',         region:'Europa del Este',   lat:49.0, lng:32.0,  tag:'war',     int:95, alertas:8, paises:50,
     desc:'Conflicto armado activo. Frentes en Kursk, Zaporiyia y Donetsk. +620K bajas estimadas.',
-    links:[
-      {l:'ISW Update',      u:'https://understandingwar.org',                  c:'#7c4dff'},
-      {l:'DeepStateMap',    u:'https://deepstatemap.live',                     c:'#00b4d8'},
-      {l:'Kyiv Indep.',     u:'https://kyivindependent.com',                   c:'#00e5ff'},
-      {l:'LiveUAMap RT',    u:'https://liveuamap.com',                         c:'#ff3d57'},
-      {l:'Oryx Losses',     u:'https://www.oryxspioenkop.com',                 c:'#4caf50'},
-      {l:'Sentinel Hub',    u:'https://apps.sentinel-hub.com/eo-browser/',     c:'#b44fff'},
-    ],
-    xlinks:[
-      {l:'@RALee85',       u:'https://x.com/RALee85'},
-      {l:'@UAWeapons',     u:'https://x.com/UAWeapons'},
-      {l:'@GeoConfirmed',  u:'https://x.com/GeoConfirmed'},
-      {l:'@War_Mapper',    u:'https://x.com/War_Mapper'},
-      {l:'@oryxspioenkop', u:'https://x.com/oryxspioenkop'},
-    ]
-  },
-  {
-    id:2, title:'Conflicto Gaza / Hamás', region:'Oriente Medio', lat:31.5, lng:34.4,
-    tag:'war', intensity:90, kpis:{int:90, alertas:6, paises:6},
-    desc:'Operaciones israelíes en Gaza. Crisis humanitaria severa. +47K bajas civiles estimadas.',
-    links:[
-      {l:'Al Jazeera Gaza', u:'https://www.aljazeera.com/tag/israel-palestine-conflict/', c:'#c4a029'},
-      {l:'Middle East Eye', u:'https://www.middleeasteye.net',                            c:'#09c'},
-      {l:'OCHA Humanit.',   u:'https://www.unocha.org/occupied-palestinian-territory',   c:'#00b4d8'},
-      {l:'ACLED Gaza',      u:'https://acleddata.com/israel-palestine-crisis/',           c:'#ff4081'},
-      {l:'Bellingcat',      u:'https://www.bellingcat.com',                               c:'#00e5ff'},
-      {l:'Sentinel Hub',    u:'https://apps.sentinel-hub.com/eo-browser/',                c:'#b44fff'},
-    ],
-    xlinks:[
-      {l:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-      {l:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
-      {l:'@KofmanMichael',  u:'https://x.com/KofmanMichael'},
-      {l:'@MiddleEastEye',  u:'https://x.com/MiddleEastEye'},
-      {l:'@HawzhinOzodi',   u:'https://x.com/HawzhinOzodi'},
-    ]
-  },
-  {
-    id:3, title:'Tensión Taiwán-China', region:'Asia-Pacífico', lat:23.5, lng:121.0,
-    tag:'tension', intensity:78, kpis:{int:78, alertas:3, paises:4},
-    desc:'Maniobras militares chinas en el estrecho. Incursiones en ADIZ reportadas.',
-    links:[
-      {l:'FlightRadar24',   u:'https://www.flightradar24.com',                c:'#f60'},
-      {l:'ADS-B Exchange',  u:'https://www.adsbexchange.com',                 c:'#7c4dff'},
-      {l:'MarineTraffic',   u:'https://www.marinetraffic.com',                c:'#00b4d8'},
-      {l:'CFR Taiwán',      u:'https://www.cfr.org/global-conflict-tracker/conflict/taiwan-strait', c:'#7c4dff'},
-      {l:'N2YO Satélites',  u:'https://www.n2yo.com',                        c:'#ffd600'},
-    ],
-    xlinks:[
-      {l:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-      {l:'@MT_Anderson',    u:'https://x.com/MT_Anderson'},
-    ]
-  },
-  {
-    id:4, title:'Conflicto Sudán Civil', region:'África del Norte', lat:15.5, lng:32.5,
-    tag:'war', intensity:85, kpis:{int:85, alertas:4, paises:2},
-    desc:'SAF vs RSF. Crisis humanitaria masiva. +150K muertos. 10.8M desplazados.',
-    links:[
-      {l:'ACLED Sudán',     u:'https://acleddata.com/sudan-crisis/',          c:'#ff4081'},
-      {l:'OCHA Sudán',      u:'https://www.unocha.org/sudan',                 c:'#00b4d8'},
-      {l:'Al Jazeera',      u:'https://www.aljazeera.com/tag/sudan/',         c:'#c4a029'},
-      {l:'Sentinel Hub',    u:'https://apps.sentinel-hub.com/eo-browser/',    c:'#b44fff'},
-      {l:'CFR Tracker',     u:'https://www.cfr.org/global-conflict-tracker',  c:'#7c4dff'},
-    ],
-    xlinks:[
-      {l:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
-      {l:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-      {l:'@Conflicts',      u:'https://x.com/Conflicts'},
-    ]
-  },
-  {
-    id:5, title:'Sahel – Operaciones Yihadistas', region:'África Occidental', lat:14.0, lng:2.0,
-    tag:'crisis', intensity:72, kpis:{int:72, alertas:3, paises:5},
-    desc:'JNIM e ISGS activos en Mali, Burkina Faso y Níger. Retiro de fuerzas occidentales.',
-    links:[
-      {l:'ACLED Sahel',     u:'https://acleddata.com/africa/',                c:'#ff4081'},
-      {l:'Al Jazeera Afr.', u:'https://www.aljazeera.com/africa/',            c:'#c4a029'},
-      {l:'ISW – Sahel',     u:'https://understandingwar.org',                 c:'#7c4dff'},
-      {l:'OCHA Sahel',      u:'https://www.unocha.org/west-and-central-africa',c:'#00b4d8'},
-    ],
-    xlinks:[
-      {l:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
-      {l:'@Conflicts',      u:'https://x.com/Conflicts'},
-    ]
-  },
-  {
-    id:6, title:'Mar Rojo – Ataques Houthi', region:'Oriente Medio', lat:14.0, lng:42.5,
-    tag:'naval', intensity:80, kpis:{int:80, alertas:5, paises:8},
-    desc:'Ataques con misiles y drones a embarcaciones. 892 buques desviados del Canal de Suez.',
-    links:[
-      {l:'MarineTraffic',   u:'https://www.marinetraffic.com',                c:'#00b4d8'},
-      {l:'VesselFinder',    u:'https://www.vesselfinder.com',                 c:'#0077b6'},
-      {l:'GlobalFishWatch', u:'https://globalfishingwatch.org/map',           c:'#4caf50'},
-      {l:'ADS-B Exchange',  u:'https://www.adsbexchange.com',                 c:'#7c4dff'},
-      {l:'Al Jazeera Yem.', u:'https://www.aljazeera.com/tag/yemen/',         c:'#c4a029'},
-      {l:'The War Zone',    u:'https://www.thedrive.com/the-war-zone',        c:'#ff6b35'},
-    ],
-    xlinks:[
-      {l:'@TankerTrackers', u:'https://x.com/TankerTrackers'},
-      {l:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-      {l:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
-    ]
-  },
-  {
-    id:7, title:'Tensión Irán – Israel', region:'Oriente Medio', lat:32.0, lng:35.5,
-    tag:'tension', intensity:82, kpis:{int:82, alertas:4, paises:6},
+    links:[{l:'ISW Daily',u:'https://understandingwar.org',c:'#7c4dff'},{l:'DeepStateMap',u:'https://deepstatemap.live',c:'#00b4d8'},{l:'Kyiv Indep.',u:'https://kyivindependent.com',c:'#00e5ff'},{l:'LiveUAMap',u:'https://liveuamap.com',c:'#ff3d57'},{l:'Oryx Losses',u:'https://www.oryxspioenkop.com',c:'#4caf50'},{l:'Sentinel Hub',u:'https://apps.sentinel-hub.com/eo-browser/',c:'#b44fff'}],
+    xl:[{n:'@RALee85',u:'https://x.com/RALee85'},{n:'@UAWeapons',u:'https://x.com/UAWeapons'},{n:'@War_Mapper',u:'https://x.com/War_Mapper'},{n:'@oryxspioenkop',u:'https://x.com/oryxspioenkop'},{n:'@GeoConfirmed',u:'https://x.com/GeoConfirmed'}]},
+  { id:2,  title:'Conflicto Gaza / Hamás',        region:'Oriente Medio',    lat:31.5, lng:34.4,  tag:'war',     int:90, alertas:6, paises:6,
+    desc:'Operaciones israelíes en Gaza. Crisis humanitaria severa. +47K bajas estimadas.',
+    links:[{l:'Middle East Eye',u:'https://www.middleeasteye.net',c:'#09c'},{l:'Al Jazeera',u:'https://www.aljazeera.com/tag/israel-palestine-conflict/',c:'#c4a029'},{l:'OCHA',u:'https://www.unocha.org/occupied-palestinian-territory',c:'#00b4d8'},{l:'ACLED Gaza',u:'https://acleddata.com/israel-palestine-crisis/',c:'#ff4081'},{l:'Bellingcat',u:'https://www.bellingcat.com',c:'#00e5ff'},{l:'Sentinel Hub',u:'https://apps.sentinel-hub.com/eo-browser/',c:'#b44fff'}],
+    xl:[{n:'@IntelCrab',u:'https://x.com/IntelCrab'},{n:'@OSINTdefender',u:'https://x.com/OSINTdefender'},{n:'@MiddleEastEye',u:'https://x.com/MiddleEastEye'},{n:'@HawzhinOzodi',u:'https://x.com/HawzhinOzodi'},{n:'@KofmanMichael',u:'https://x.com/KofmanMichael'}]},
+  { id:3,  title:'Tensión Irán – Israel',         region:'Oriente Medio',    lat:32.0, lng:35.5,  tag:'tension', int:82, alertas:4, paises:6,
     desc:'Intercambio de ataques directos. Programa nuclear iraní supera 83.7% enriquecimiento.',
-    links:[
-      {l:'Middle East Eye', u:'https://www.middleeasteye.net',                c:'#09c'},
-      {l:'Reuters MENA',    u:'https://www.reuters.com/world/middle-east/',   c:'#f60'},
-      {l:'AIEA / IAEA',     u:'https://www.iaea.org',                        c:'#00b4d8'},
-      {l:'FlightRadar24',   u:'https://www.flightradar24.com',                c:'#f60'},
-    ],
-    xlinks:[
-      {l:'@KofmanMichael',  u:'https://x.com/KofmanMichael'},
-      {l:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-      {l:'@MiddleEastEye',  u:'https://x.com/MiddleEastEye'},
-    ]
-  },
-  {
-    id:8, title:'Conflicto Myanmar', region:'Asia', lat:19.7, lng:96.1,
-    tag:'war', intensity:70, kpis:{int:70, alertas:2, paises:2},
-    desc:'Junta militar vs PDF. Pérdida de territorios clave. +2.6M desplazados.',
-    links:[
-      {l:'ACLED Myanmar',   u:'https://acleddata.com/myanmar/',               c:'#ff4081'},
-      {l:'ISW',             u:'https://understandingwar.org',                 c:'#7c4dff'},
-      {l:'Al Jazeera',      u:'https://www.aljazeera.com/tag/myanmar/',       c:'#c4a029'},
-    ],
-    xlinks:[
-      {l:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
-      {l:'@Conflicts',      u:'https://x.com/Conflicts'},
-    ]
-  },
-  {
-    id:9, title:'Corea del Norte – ICBM', region:'Asia-Pacífico', lat:40.0, lng:127.0,
-    tag:'nuclear', intensity:65, kpis:{int:65, alertas:2, paises:5},
-    desc:'Pruebas de ICBM Hwasong-18. Tropas DPRK en Ucrania confirmadas. Cooperación con Rusia.',
-    links:[
-      {l:'38 North',        u:'https://www.38north.org',                      c:'#ff9100'},
-      {l:'ADS-B Exchange',  u:'https://www.adsbexchange.com',                 c:'#7c4dff'},
-      {l:'N2YO Satélites',  u:'https://www.n2yo.com',                        c:'#ffd600'},
-      {l:'The War Zone',    u:'https://www.thedrive.com/the-war-zone',        c:'#ff6b35'},
-    ],
-    xlinks:[
-      {l:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-      {l:'@MT_Anderson',    u:'https://x.com/MT_Anderson'},
-    ]
-  },
-  {
-    id:10, title:'Mar del Sur de China', region:'Asia-Pacífico', lat:12.0, lng:114.0,
-    tag:'tension', intensity:68, kpis:{int:68, alertas:2, paises:6},
-    desc:'Incidentes guardacostas chinos y filipinos. Construcción de islas artificiales.',
-    links:[
-      {l:'MarineTraffic',   u:'https://www.marinetraffic.com',                c:'#00b4d8'},
-      {l:'FlightRadar24',   u:'https://www.flightradar24.com',                c:'#f60'},
-      {l:'CSIS Asia',       u:'https://www.csis.org/programs/china-power-project', c:'#7c4dff'},
-    ],
-    xlinks:[
-      {l:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-    ]
-  },
-  {
-    id:11, title:'Haití – Crisis Pandillas', region:'Caribe', lat:18.9, lng:-72.3,
-    tag:'crisis', intensity:75, kpis:{int:75, alertas:3, paises:1},
-    desc:'Pandillas controlan 80% de Puerto Príncipe. Misión CARICOM/Kenia desplegada.',
-    links:[
-      {l:'OCHA Haití',      u:'https://www.unocha.org/haiti',                 c:'#00b4d8'},
-      {l:'ACLED Haití',     u:'https://acleddata.com/haiti/',                 c:'#ff4081'},
-      {l:'Reuters',         u:'https://www.reuters.com/world/americas/haiti/',c:'#f60'},
-    ],
-    xlinks:[
-      {l:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
-      {l:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-    ]
-  },
-  {
-    id:12, title:'Cyber Rusia-OTAN', region:'Global', lat:55.7, lng:37.6,
-    tag:'cyber', intensity:77, kpis:{int:77, alertas:5, paises:30},
+    links:[{l:'Middle East Eye',u:'https://www.middleeasteye.net',c:'#09c'},{l:'AIEA/IAEA',u:'https://www.iaea.org',c:'#7c4dff'},{l:'Reuters MENA',u:'https://www.reuters.com/world/middle-east/',c:'#f60'},{l:'FlightRadar24',u:'https://www.flightradar24.com',c:'#f60'}],
+    xl:[{n:'@KofmanMichael',u:'https://x.com/KofmanMichael'},{n:'@IntelCrab',u:'https://x.com/IntelCrab'},{n:'@MiddleEastEye',u:'https://x.com/MiddleEastEye'}]},
+  { id:4,  title:'Mar Rojo – Ataques Houthi',     region:'Oriente Medio',    lat:14.0, lng:42.5,  tag:'naval',   int:80, alertas:5, paises:8,
+    desc:'Ataques con misiles y drones. 892 buques desviados del Canal de Suez en 2025.',
+    links:[{l:'MarineTraffic',u:'https://www.marinetraffic.com',c:'#00b4d8'},{l:'VesselFinder',u:'https://www.vesselfinder.com',c:'#0077b6'},{l:'GlobalFishWatch',u:'https://globalfishingwatch.org/map',c:'#4caf50'},{l:'ADS-B Exch.',u:'https://www.adsbexchange.com',c:'#7c4dff'},{l:'The War Zone',u:'https://www.thedrive.com/the-war-zone',c:'#ff6b35'}],
+    xl:[{n:'@TankerTrackers',u:'https://x.com/TankerTrackers'},{n:'@IntelCrab',u:'https://x.com/IntelCrab'},{n:'@OSINTdefender',u:'https://x.com/OSINTdefender'}]},
+  { id:5,  title:'Conflicto Sudán Civil',         region:'África del Norte', lat:15.5, lng:32.5,  tag:'war',     int:85, alertas:4, paises:2,
+    desc:'SAF vs RSF. +150K muertos. 10.8M desplazados. Crisis humanitaria masiva.',
+    links:[{l:'ACLED Sudán',u:'https://acleddata.com/sudan-crisis/',c:'#ff4081'},{l:'OCHA Sudán',u:'https://www.unocha.org/sudan',c:'#00b4d8'},{l:'Al Jazeera',u:'https://www.aljazeera.com/tag/sudan/',c:'#c4a029'},{l:'Sentinel Hub',u:'https://apps.sentinel-hub.com/eo-browser/',c:'#b44fff'}],
+    xl:[{n:'@OSINTdefender',u:'https://x.com/OSINTdefender'},{n:'@IntelCrab',u:'https://x.com/IntelCrab'},{n:'@Conflicts',u:'https://x.com/Conflicts'}]},
+  { id:6,  title:'Sahel – Operaciones Yihadistas',region:'África Occidental',lat:14.0, lng:2.0,   tag:'crisis',  int:72, alertas:3, paises:5,
+    desc:'JNIM e ISGS activos en Mali, Burkina Faso y Níger.',
+    links:[{l:'ACLED Sahel',u:'https://acleddata.com/africa/',c:'#ff4081'},{l:'Al Jazeera Afr.',u:'https://www.aljazeera.com/africa/',c:'#c4a029'},{l:'ISW',u:'https://understandingwar.org',c:'#7c4dff'},{l:'CFR Tracker',u:'https://www.cfr.org/global-conflict-tracker',c:'#9c27b0'}],
+    xl:[{n:'@OSINTdefender',u:'https://x.com/OSINTdefender'},{n:'@Conflicts',u:'https://x.com/Conflicts'}]},
+  { id:7,  title:'Tensión Taiwán-China',          region:'Asia-Pacífico',    lat:23.5, lng:121.0, tag:'tension', int:78, alertas:3, paises:4,
+    desc:'Maniobras militares chinas en el estrecho. Incursiones en ADIZ.',
+    links:[{l:'FlightRadar24',u:'https://www.flightradar24.com',c:'#f60'},{l:'ADS-B Exch.',u:'https://www.adsbexchange.com',c:'#7c4dff'},{l:'MarineTraffic',u:'https://www.marinetraffic.com',c:'#00b4d8'},{l:'CFR Taiwán',u:'https://www.cfr.org/global-conflict-tracker/conflict/taiwan-strait',c:'#7c4dff'},{l:'N2YO Sat.',u:'https://www.n2yo.com',c:'#ffd600'}],
+    xl:[{n:'@IntelCrab',u:'https://x.com/IntelCrab'},{n:'@MT_Anderson',u:'https://x.com/MT_Anderson'}]},
+  { id:8,  title:'Corea del Norte – ICBM',        region:'Asia-Pacífico',    lat:40.0, lng:127.0, tag:'nuclear', int:65, alertas:2, paises:5,
+    desc:'Pruebas de ICBM Hwasong-18. Tropas DPRK en Ucrania. Cooperación con Rusia.',
+    links:[{l:'38 North',u:'https://www.38north.org',c:'#ff9100'},{l:'ADS-B Exch.',u:'https://www.adsbexchange.com',c:'#7c4dff'},{l:'N2YO Sat.',u:'https://www.n2yo.com',c:'#ffd600'},{l:'The War Zone',u:'https://www.thedrive.com/the-war-zone',c:'#ff6b35'}],
+    xl:[{n:'@IntelCrab',u:'https://x.com/IntelCrab'},{n:'@MT_Anderson',u:'https://x.com/MT_Anderson'}]},
+  { id:9,  title:'Ciberguerra Global',            region:'Global',           lat:55.7, lng:37.6,  tag:'cyber',   int:77, alertas:5, paises:30,
     desc:'APT28/Sandworm activos. Ataques a infraestructura crítica en Europa y EE.UU.',
-    links:[
-      {l:'CISA Alerts',     u:'https://www.cisa.gov/news-events/cybersecurity-advisories', c:'#4caf50'},
-      {l:'Recorded Future', u:'https://www.recordedfuture.com',               c:'#4caf50'},
-      {l:'Mandiant Intel',  u:'https://www.mandiant.com/resources/blog',      c:'#b44fff'},
-      {l:'AlienVault OTX',  u:'https://otx.alienvault.com',                  c:'#00ff87'},
-      {l:'GreyNoise',       u:'https://www.greynoise.io',                     c:'#9c27b0'},
-    ],
-    xlinks:[
-      {l:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-      {l:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
-    ]
-  },
-  {
-    id:13, title:'Somalia – Al-Shabaab', region:'África del Este', lat:5.1, lng:46.2,
-    tag:'crisis', intensity:65, kpis:{int:65, alertas:2, paises:4},
+    links:[{l:'CISA Alerts',u:'https://www.cisa.gov/news-events/cybersecurity-advisories',c:'#4caf50'},{l:'Recorded Future',u:'https://www.recordedfuture.com',c:'#4caf50'},{l:'Mandiant',u:'https://www.mandiant.com/resources/blog',c:'#b44fff'},{l:'AlienVault',u:'https://otx.alienvault.com',c:'#00ff87'},{l:'GreyNoise',u:'https://www.greynoise.io',c:'#9c27b0'}],
+    xl:[{n:'@IntelCrab',u:'https://x.com/IntelCrab'},{n:'@OSINTdefender',u:'https://x.com/OSINTdefender'}]},
+  { id:10, title:'Haití – Crisis Pandillas',      region:'Caribe',           lat:18.9, lng:-72.3, tag:'crisis',  int:75, alertas:3, paises:1,
+    desc:'Pandillas controlan 80% de Puerto Príncipe. Misión CARICOM/Kenia desplegada.',
+    links:[{l:'OCHA Haití',u:'https://www.unocha.org/haiti',c:'#00b4d8'},{l:'ACLED Haití',u:'https://acleddata.com/haiti/',c:'#ff4081'},{l:'Reuters',u:'https://www.reuters.com/world/americas/haiti/',c:'#f60'}],
+    xl:[{n:'@OSINTdefender',u:'https://x.com/OSINTdefender'},{n:'@IntelCrab',u:'https://x.com/IntelCrab'}]},
+  { id:11, title:'Mar del Sur de China',          region:'Asia-Pacífico',    lat:12.0, lng:114.0, tag:'tension', int:68, alertas:2, paises:6,
+    desc:'Incidentes guardacostas chinos y filipinos. Islas artificiales en construcción.',
+    links:[{l:'MarineTraffic',u:'https://www.marinetraffic.com',c:'#00b4d8'},{l:'FlightRadar24',u:'https://www.flightradar24.com',c:'#f60'},{l:'CSIS Asia',u:'https://www.csis.org/programs/china-power-project',c:'#7c4dff'}],
+    xl:[{n:'@IntelCrab',u:'https://x.com/IntelCrab'}]},
+  { id:12, title:'Somalia – Al-Shabaab',          region:'África del Este',  lat:5.1,  lng:46.2,  tag:'crisis',  int:65, alertas:2, paises:4,
     desc:'Ataques continuos de Al-Shabaab. ATMIS retirándose. 3.8M desplazados.',
-    links:[
-      {l:'ACLED Somalia',   u:'https://acleddata.com/somalia/',               c:'#ff4081'},
-      {l:'OCHA Somalia',    u:'https://www.unocha.org/somalia',               c:'#00b4d8'},
-      {l:'ISW',             u:'https://understandingwar.org',                 c:'#7c4dff'},
-    ],
-    xlinks:[
-      {l:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
-      {l:'@Conflicts',      u:'https://x.com/Conflicts'},
-    ]
-  },
-  {
-    id:14, title:'Cachemira', region:'Asia del Sur', lat:34.0, lng:74.8,
-    tag:'tension', intensity:60, kpis:{int:60, alertas:1, paises:3},
-    desc:'Enfrentamientos India-Pakistán en la Línea de Control. Alertas terrorismo.',
-    links:[
-      {l:'ACLED Asia Sur',  u:'https://acleddata.com/south-asia/',            c:'#ff4081'},
-      {l:'FlightRadar24',   u:'https://www.flightradar24.com',                c:'#f60'},
-    ],
-    xlinks:[
-      {l:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-    ]
-  },
-  {
-    id:15, title:'Estrecho de Ormuz', region:'Oriente Medio', lat:26.5, lng:56.2,
-    tag:'naval', intensity:70, kpis:{int:70, alertas:3, paises:4},
-    desc:'Presencia naval iraní. Incautaciones de buques. 20% del petróleo mundial en tránsito.',
-    links:[
-      {l:'MarineTraffic',   u:'https://www.marinetraffic.com',                c:'#00b4d8'},
-      {l:'VesselFinder',    u:'https://www.vesselfinder.com',                 c:'#0077b6'},
-      {l:'GlobalFishWatch', u:'https://globalfishingwatch.org/map',           c:'#4caf50'},
-    ],
-    xlinks:[
-      {l:'@TankerTrackers', u:'https://x.com/TankerTrackers'},
-      {l:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-    ]
-  },
-  {
-    id:16, title:'Venezuela-Guyana (Essequibo)', region:'América del Sur', lat:6.8, lng:-58.2,
-    tag:'tension', intensity:45, kpis:{int:45, alertas:0, paises:2},
-    desc:'Disputa territorial activa. Venezuela reclama 160K km². Movimientos militares.',
-    links:[
-      {l:'Reuters',         u:'https://www.reuters.com/world/americas/',      c:'#f60'},
-      {l:'CFR Tracker',     u:'https://www.cfr.org/global-conflict-tracker',  c:'#7c4dff'},
-    ],
-    xlinks:[
-      {l:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-    ]
-  },
-  {
-    id:17, title:'Pakistan – TTP', region:'Asia del Sur', lat:33.7, lng:73.0,
-    tag:'crisis', intensity:62, kpis:{int:62, alertas:2, paises:2},
-    desc:'Tehrik-i-Taliban Pakistan intensifica ataques. Tensión creciente con Kabul.',
-    links:[
-      {l:'ACLED Pakistan',  u:'https://acleddata.com/south-asia/',            c:'#ff4081'},
-      {l:'Reuters Pakistan',u:'https://www.reuters.com/world/asia-pacific/',  c:'#f60'},
-    ],
-    xlinks:[
-      {l:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
-      {l:'@Conflicts',      u:'https://x.com/Conflicts'},
-    ]
-  },
-  {
-    id:18, title:'Libia – Facciones Armadas', region:'África del Norte', lat:27.0, lng:14.0,
-    tag:'crisis', intensity:48, kpis:{int:48, alertas:1, paises:8},
-    desc:'Rivalidad persistente en Trípoli. Presencia Africa Corps (ex-Wagner).',
-    links:[
-      {l:'ACLED Libia',     u:'https://acleddata.com/north-africa/',          c:'#ff4081'},
-      {l:'ISW',             u:'https://understandingwar.org',                 c:'#7c4dff'},
-      {l:'Al Jazeera',      u:'https://www.aljazeera.com/tag/libya/',         c:'#c4a029'},
-    ],
-    xlinks:[
-      {l:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
-    ]
-  },
+    links:[{l:'ACLED Somalia',u:'https://acleddata.com/somalia/',c:'#ff4081'},{l:'OCHA Somalia',u:'https://www.unocha.org/somalia',c:'#00b4d8'},{l:'ISW',u:'https://understandingwar.org',c:'#7c4dff'}],
+    xl:[{n:'@OSINTdefender',u:'https://x.com/OSINTdefender'},{n:'@Conflicts',u:'https://x.com/Conflicts'}]},
 ];
 
-// ================================================================
-// CONFLICT CARDS  (grouped zones with rich link+X data)
-// ================================================================
-var conflictCards = [
-  {
-    name:'Ucrania / Rusia', tag:'war', color:'#ff3d57', intensity:95,
-    kpis:[{val:'95',label:'Intensidad'},{val:'8',label:'Alertas hoy'},{val:'50',label:'Países'}],
-    conflictId: 1,
-    links:[
-      {l:'ISW Daily',      u:'https://understandingwar.org',                  c:'#7c4dff'},
-      {l:'DeepStateMap',   u:'https://deepstatemap.live',                     c:'#00b4d8'},
-      {l:'Kyiv Indep.',    u:'https://kyivindependent.com',                   c:'#00e5ff'},
-      {l:'LiveUAMap RT',   u:'https://liveuamap.com',                         c:'#ff3d57'},
-      {l:'Oryx Losses',    u:'https://www.oryxspioenkop.com',                 c:'#4caf50'},
-      {l:'FlightRadar24',  u:'https://www.flightradar24.com',                 c:'#f60'},
-      {l:'MarineTraffic',  u:'https://www.marinetraffic.com',                 c:'#00b4d8'},
-      {l:'Sentinel Hub',   u:'https://apps.sentinel-hub.com/eo-browser/',     c:'#b44fff'},
-    ],
-    xlinks:[
-      {l:'@RALee85',       u:'https://x.com/RALee85'},
-      {l:'@UAWeapons',     u:'https://x.com/UAWeapons'},
-      {l:'@GeoConfirmed',  u:'https://x.com/GeoConfirmed'},
-      {l:'@War_Mapper',    u:'https://x.com/War_Mapper'},
-      {l:'@oryxspioenkop', u:'https://x.com/oryxspioenkop'},
-      {l:'@KofmanMichael', u:'https://x.com/KofmanMichael'},
-    ]
-  },
-  {
-    name:'Gaza / Israel / Irán', tag:'war', color:'#ff7c1a', intensity:90,
-    kpis:[{val:'90',label:'Intensidad'},{val:'6',label:'Alertas hoy'},{val:'6',label:'Países'}],
-    conflictId: 2,
-    links:[
-      {l:'Middle East Eye', u:'https://www.middleeasteye.net',                c:'#09c'},
-      {l:'Al Jazeera Gaza', u:'https://www.aljazeera.com/tag/israel-palestine-conflict/', c:'#c4a029'},
-      {l:'OCHA Humanit.',   u:'https://www.unocha.org/occupied-palestinian-territory',   c:'#00b4d8'},
-      {l:'ACLED Gaza',      u:'https://acleddata.com/israel-palestine-crisis/',           c:'#ff4081'},
-      {l:'Bellingcat',      u:'https://www.bellingcat.com',                               c:'#00e5ff'},
-      {l:'AIEA / IAEA',     u:'https://www.iaea.org',                                    c:'#7c4dff'},
-      {l:'Reuters MENA',    u:'https://www.reuters.com/world/middle-east/',               c:'#f60'},
-      {l:'Sentinel Hub',    u:'https://apps.sentinel-hub.com/eo-browser/',                c:'#b44fff'},
-    ],
-    xlinks:[
-      {l:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-      {l:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
-      {l:'@KofmanMichael',  u:'https://x.com/KofmanMichael'},
-      {l:'@MiddleEastEye',  u:'https://x.com/MiddleEastEye'},
-      {l:'@HawzhinOzodi',   u:'https://x.com/HawzhinOzodi'},
-    ]
-  },
-  {
-    name:'Mar Rojo / Houthi / Ormuz', tag:'naval', color:'#00e5ff', intensity:80,
-    kpis:[{val:'80',label:'Intensidad'},{val:'5',label:'Alertas hoy'},{val:'892',label:'Buques desv.'}],
-    conflictId: 6,
-    links:[
-      {l:'MarineTraffic',   u:'https://www.marinetraffic.com',                c:'#00b4d8'},
-      {l:'VesselFinder',    u:'https://www.vesselfinder.com',                 c:'#0077b6'},
-      {l:'GlobalFishWatch', u:'https://globalfishingwatch.org/map',           c:'#4caf50'},
-      {l:'ADS-B Exchange',  u:'https://www.adsbexchange.com',                 c:'#7c4dff'},
-      {l:'The War Zone',    u:'https://www.thedrive.com/the-war-zone',        c:'#ff6b35'},
-      {l:'Reuters Shipping',u:'https://www.reuters.com/business/shipping/',   c:'#f60'},
-    ],
-    xlinks:[
-      {l:'@TankerTrackers', u:'https://x.com/TankerTrackers'},
-      {l:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-      {l:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
-      {l:'@War_Mapper',     u:'https://x.com/War_Mapper'},
-    ]
-  },
-  {
-    name:'África: Sahel / Sudán / Somalia', tag:'crisis', color:'#ffd600', intensity:78,
-    kpis:[{val:'78',label:'Intensidad'},{val:'4',label:'Alertas hoy'},{val:'12',label:'Países'}],
-    conflictId: 4,
-    links:[
-      {l:'ACLED África',    u:'https://acleddata.com/africa/',                c:'#ff4081'},
-      {l:'OCHA Sudán',      u:'https://www.unocha.org/sudan',                 c:'#00b4d8'},
-      {l:'Al Jazeera Afr.', u:'https://www.aljazeera.com/africa/',            c:'#c4a029'},
-      {l:'ISW – Sahel',     u:'https://understandingwar.org',                 c:'#7c4dff'},
-      {l:'Sentinel Hub',    u:'https://apps.sentinel-hub.com/eo-browser/',    c:'#b44fff'},
-      {l:'CFR Tracker',     u:'https://www.cfr.org/global-conflict-tracker',  c:'#9c27b0'},
-    ],
-    xlinks:[
-      {l:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
-      {l:'@Conflicts',      u:'https://x.com/Conflicts'},
-      {l:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-    ]
-  },
-  {
-    name:'Asia-Pacífico: Taiwán / DPRK / SCS', tag:'tension', color:'#b44fff', intensity:75,
-    kpis:[{val:'75',label:'Intensidad'},{val:'3',label:'Alertas hoy'},{val:'11',label:'Países'}],
-    conflictId: 3,
-    links:[
-      {l:'FlightRadar24',   u:'https://www.flightradar24.com',                c:'#f60'},
-      {l:'ADS-B Exchange',  u:'https://www.adsbexchange.com',                 c:'#7c4dff'},
-      {l:'MarineTraffic',   u:'https://www.marinetraffic.com',                c:'#00b4d8'},
-      {l:'38 North DPRK',   u:'https://www.38north.org',                      c:'#ff9100'},
-      {l:'N2YO Satélites',  u:'https://www.n2yo.com',                        c:'#ffd600'},
-      {l:'CFR Taiwán',      u:'https://www.cfr.org/global-conflict-tracker/conflict/taiwan-strait', c:'#7c4dff'},
-    ],
-    xlinks:[
-      {l:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-      {l:'@MT_Anderson',    u:'https://x.com/MT_Anderson'},
-      {l:'@War_Mapper',     u:'https://x.com/War_Mapper'},
-    ]
-  },
-  {
-    name:'Ciberguerra Global', tag:'cyber', color:'#00ff87', intensity:77,
-    kpis:[{val:'77',label:'Intensidad'},{val:'5',label:'Alertas hoy'},{val:'30',label:'Países'}],
-    conflictId: 12,
-    links:[
-      {l:'CISA Alerts',     u:'https://www.cisa.gov/news-events/cybersecurity-advisories', c:'#4caf50'},
-      {l:'Recorded Future', u:'https://www.recordedfuture.com',               c:'#4caf50'},
-      {l:'Mandiant Intel',  u:'https://www.mandiant.com/resources/blog',      c:'#b44fff'},
-      {l:'AlienVault OTX',  u:'https://otx.alienvault.com',                  c:'#00ff87'},
-      {l:'GreyNoise',       u:'https://www.greynoise.io',                     c:'#9c27b0'},
-      {l:'Shodan',          u:'https://www.shodan.io',                        c:'#00e5ff'},
-    ],
-    xlinks:[
-      {l:'@IntelCrab',      u:'https://x.com/IntelCrab'},
-      {l:'@OSINTdefender',  u:'https://x.com/OSINTdefender'},
-      {l:'@GeoConfirmed',   u:'https://x.com/GeoConfirmed'},
-    ]
-  },
+// ═══════════════════════════════════════════════
+// CONFLICT CARDS (grouped zones)
+// ═══════════════════════════════════════════════
+var CARDS = [
+  { name:'Ucrania / Rusia', tag:'war', color:'#ff3d57', int:95, cid:1,
+    kpis:[{v:'95',l:'Intensidad'},{v:'8',l:'Alertas'},{v:'50',l:'Países'}],
+    links:[{l:'ISW Daily',u:'https://understandingwar.org',c:'#7c4dff'},{l:'DeepStateMap',u:'https://deepstatemap.live',c:'#00b4d8'},{l:'Kyiv Indep.',u:'https://kyivindependent.com',c:'#00e5ff'},{l:'LiveUAMap',u:'https://liveuamap.com',c:'#ff3d57'},{l:'Oryx Losses',u:'https://www.oryxspioenkop.com',c:'#4caf50'},{l:'FlightRadar24',u:'https://www.flightradar24.com',c:'#f60'},{l:'MarineTraffic',u:'https://www.marinetraffic.com',c:'#00b4d8'},{l:'Sentinel Hub',u:'https://apps.sentinel-hub.com/eo-browser/',c:'#b44fff'}] },
+  { name:'Gaza / Israel / Irán', tag:'war', color:'#ff7c1a', int:90, cid:2,
+    kpis:[{v:'90',l:'Intensidad'},{v:'6',l:'Alertas'},{v:'6',l:'Países'}],
+    links:[{l:'Middle East Eye',u:'https://www.middleeasteye.net',c:'#09c'},{l:'Al Jazeera',u:'https://www.aljazeera.com/tag/israel-palestine-conflict/',c:'#c4a029'},{l:'OCHA',u:'https://www.unocha.org/occupied-palestinian-territory',c:'#00b4d8'},{l:'ACLED Gaza',u:'https://acleddata.com/israel-palestine-crisis/',c:'#ff4081'},{l:'AIEA/IAEA',u:'https://www.iaea.org',c:'#7c4dff'},{l:'Bellingcat',u:'https://www.bellingcat.com',c:'#00e5ff'},{l:'Sentinel Hub',u:'https://apps.sentinel-hub.com/eo-browser/',c:'#b44fff'}] },
+  { name:'Mar Rojo / Houthi / Ormuz', tag:'naval', color:'#00e5ff', int:80, cid:4,
+    kpis:[{v:'80',l:'Intensidad'},{v:'5',l:'Alertas'},{v:'892',l:'Buques desv.'}],
+    links:[{l:'MarineTraffic',u:'https://www.marinetraffic.com',c:'#00b4d8'},{l:'VesselFinder',u:'https://www.vesselfinder.com',c:'#0077b6'},{l:'GlobalFishWatch',u:'https://globalfishingwatch.org/map',c:'#4caf50'},{l:'ADS-B Exch.',u:'https://www.adsbexchange.com',c:'#7c4dff'},{l:'The War Zone',u:'https://www.thedrive.com/the-war-zone',c:'#ff6b35'},{l:'Reuters Shipping',u:'https://www.reuters.com/business/shipping/',c:'#f60'}] },
+  { name:'África: Sahel / Sudán / Somalia', tag:'crisis', color:'#ffd600', int:78, cid:5,
+    kpis:[{v:'78',l:'Intensidad'},{v:'4',l:'Alertas'},{v:'12',l:'Países'}],
+    links:[{l:'ACLED África',u:'https://acleddata.com/africa/',c:'#ff4081'},{l:'OCHA Sudán',u:'https://www.unocha.org/sudan',c:'#00b4d8'},{l:'Al Jazeera Afr.',u:'https://www.aljazeera.com/africa/',c:'#c4a029'},{l:'ISW',u:'https://understandingwar.org',c:'#7c4dff'},{l:'Sentinel Hub',u:'https://apps.sentinel-hub.com/eo-browser/',c:'#b44fff'},{l:'CFR Tracker',u:'https://www.cfr.org/global-conflict-tracker',c:'#9c27b0'}] },
+  { name:'Asia-Pacífico: Taiwán / DPRK / SCS', tag:'tension', color:'#b44fff', int:75, cid:7,
+    kpis:[{v:'75',l:'Intensidad'},{v:'3',l:'Alertas'},{v:'11',l:'Países'}],
+    links:[{l:'FlightRadar24',u:'https://www.flightradar24.com',c:'#f60'},{l:'ADS-B Exch.',u:'https://www.adsbexchange.com',c:'#7c4dff'},{l:'MarineTraffic',u:'https://www.marinetraffic.com',c:'#00b4d8'},{l:'38 North DPRK',u:'https://www.38north.org',c:'#ff9100'},{l:'N2YO Sat.',u:'https://www.n2yo.com',c:'#ffd600'},{l:'CFR Taiwán',u:'https://www.cfr.org/global-conflict-tracker/conflict/taiwan-strait',c:'#7c4dff'}] },
+  { name:'Ciberguerra Global', tag:'cyber', color:'#00ff87', int:77, cid:9,
+    kpis:[{v:'77',l:'Intensidad'},{v:'5',l:'Alertas'},{v:'30',l:'Países'}],
+    links:[{l:'CISA Alerts',u:'https://www.cisa.gov/news-events/cybersecurity-advisories',c:'#4caf50'},{l:'Recorded Future',u:'https://www.recordedfuture.com',c:'#4caf50'},{l:'Mandiant',u:'https://www.mandiant.com/resources/blog',c:'#b44fff'},{l:'AlienVault OTX',u:'https://otx.alienvault.com',c:'#00ff87'},{l:'GreyNoise',u:'https://www.greynoise.io',c:'#9c27b0'},{l:'Shodan',u:'https://www.shodan.io',c:'#00e5ff'}] },
 ];
 
-var tickerLinks = [
-  {t:'Rusia lanza ataque de drones contra infraestructura energética ucraniana', u:'https://liveuamap.com'},
-  {t:'China realiza ejercicios militares de 72h en el estrecho de Taiwán', u:'https://www.flightradar24.com'},
-  {t:'Houthi ataca portacontenedores en el Mar Rojo con misil antibuque', u:'https://www.marinetraffic.com'},
-  {t:'ISW reporta avances rusos en eje Avdiivka-Pokrovsk', u:'https://understandingwar.org'},
-  {t:'Israel confirma eliminación de comandante PIJ en Gaza central', u:'https://www.middleeasteye.net'},
-  {t:'AIEA: enriquecimiento de uranio iraní supera el 83.7%', u:'https://www.iaea.org'},
-  {t:'Turquía lanza nueva fase de Op. Garra-Espada en norte de Siria', u:'https://x.com/HawzhinOzodi'},
-  {t:'DPRK prueba nuevo ICBM — EE.UU. y Corea del Sur elevan alerta', u:'https://www.38north.org'},
-  {t:'Hackers rusos atacan infraestructura crítica en tres países bálticos', u:'https://www.cisa.gov/news-events/cybersecurity-advisories'},
-  {t:'MarineTraffic: 892 buques desviados del Canal de Suez en 2025', u:'https://www.marinetraffic.com'},
-  {t:'Junta de Myanmar pierde ciudad clave en Estado Shan', u:'https://acleddata.com/myanmar/'},
-  {t:'Venezuela despliega tropas en frontera Guyana-Essequibo', u:'https://www.cfr.org/global-conflict-tracker'},
+var TICKERS = [
+  {t:'Rusia lanza ataque de drones contra infraestructura energética ucraniana',u:'https://liveuamap.com'},
+  {t:'China realiza ejercicios militares de 72h en el estrecho de Taiwán',u:'https://www.flightradar24.com'},
+  {t:'Houthi ataca portacontenedores en el Mar Rojo con misil antibuque',u:'https://www.marinetraffic.com'},
+  {t:'ISW reporta avances rusos en eje Avdiivka-Pokrovsk',u:'https://understandingwar.org'},
+  {t:'Israel confirma eliminación de comandante PIJ en Gaza central',u:'https://www.middleeasteye.net'},
+  {t:'AIEA: enriquecimiento de uranio iraní supera el 83.7%',u:'https://www.iaea.org'},
+  {t:'DPRK prueba nuevo ICBM — EE.UU. y Corea del Sur elevan alerta',u:'https://www.38north.org'},
+  {t:'Hackers rusos atacan infraestructura crítica en tres países bálticos',u:'https://www.cisa.gov/news-events/cybersecurity-advisories'},
+  {t:'MarineTraffic: 892 buques desviados del Canal de Suez en 2025',u:'https://www.marinetraffic.com'},
 ];
 
-var intensityData = [
-  {region:'Europa del Este',       val:95, color:'#ff3d57'},
-  {region:'MENA',                  val:85, color:'#ff7c1a'},
-  {region:'África Sub-Sahariana',  val:72, color:'#ffd600'},
-  {region:'Asia-Pacífico',         val:70, color:'#ffd600'},
-  {region:'Asia del Sur',          val:62, color:'#00e5ff'},
-  {region:'América Latina',        val:45, color:'#00ff87'},
+var INTDATA = [
+  {r:'Europa del Este',v:95,c:'#ff3d57'},
+  {r:'MENA',v:85,c:'#ff7c1a'},
+  {r:'África Sub-Sah.',v:72,c:'#ffd600'},
+  {r:'Asia-Pacífico',v:70,c:'#ffd600'},
+  {r:'Asia del Sur',v:62,c:'#00e5ff'},
+  {r:'América Latina',v:45,c:'#00ff87'},
 ];
 
-// ================================================================
+// ═══════════════════════════════════════════════
 // MAP
-// ================================================================
-var map;
-var activeMarkers = {};
-var activeTags = {war:true,crisis:true,tension:true,naval:true,air:true,cyber:true,nuclear:true};
+// ═══════════════════════════════════════════════
+var map, markers={}, active={war:1,crisis:1,tension:1,naval:1,air:1,cyber:1,nuclear:1};
 
-var styleEl = document.createElement('style');
-styleEl.textContent =
-  '@keyframes dotPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.7;transform:scale(1.2)}}' +
-  '@keyframes ringPulse{0%{transform:scale(1);opacity:0.4}100%{transform:scale(3);opacity:0}}';
-document.head.appendChild(styleEl);
+document.head.insertAdjacentHTML('beforeend','<style>@keyframes dp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.7;transform:scale(1.2)}}@keyframes rp{0%{transform:scale(1);opacity:.4}100%{transform:scale(3);opacity:0}}</style>');
 
-function createPulseIcon(tag, intensity) {
-  var tc = TC[tag] || TC.tension;
-  var sz = Math.round(12 + (intensity - 40) / 60 * 10);
-  sz = Math.max(12, Math.min(22, sz));
-  var half = sz / 2;
-  var isSquare = (tag==='naval'||tag==='air'||tag==='cyber');
-  var shapeStyle = isSquare ? 'border-radius:2px;transform:rotate(45deg);' : 'border-radius:50%;';
-  var ringStyle  = isSquare ? 'border-radius:2px;' : 'border-radius:50%;';
-  var html =
-    '<div style="position:relative;width:'+sz+'px;height:'+sz+'px;">' +
-    '<div style="position:absolute;top:-'+half+'px;left:-'+half+'px;width:'+(sz*2)+'px;height:'+(sz*2)+'px;' +
-    'border:1.5px solid '+tc.fill+';opacity:0.25;animation:ringPulse 2.5s ease-out infinite;'+ringStyle+'"></div>' +
-    '<div style="width:'+sz+'px;height:'+sz+'px;background:'+tc.fill+';'+shapeStyle+
-    'box-shadow:0 0 '+sz+'px '+tc.glow+';animation:dotPulse 2.5s ease-in-out infinite;cursor:pointer;"></div>' +
-    '</div>';
-  return L.divIcon({html:html, iconSize:[sz,sz], iconAnchor:[half,half], className:''});
+function icon(tag,intensity){
+  var tc=TC[tag]||TC.tension, sz=Math.round(12+(intensity-40)/60*10);
+  sz=Math.max(12,Math.min(22,sz));
+  var h=sz/2, sq=(tag==='naval'||tag==='air'||tag==='cyber');
+  return L.divIcon({html:
+    '<div style="position:relative;width:'+sz+'px;height:'+sz+'px">'+
+    '<div style="position:absolute;top:-'+h+'px;left:-'+h+'px;width:'+(sz*2)+'px;height:'+(sz*2)+'px;border:1.5px solid '+tc.f+';opacity:.25;animation:rp 2.5s ease-out infinite;'+(sq?'border-radius:2px':'border-radius:50%')+';"></div>'+
+    '<div style="width:'+sz+'px;height:'+sz+'px;background:'+tc.f+';box-shadow:0 0 '+sz+'px '+tc.g+';animation:dp 2.5s ease-in-out infinite;cursor:pointer;'+(sq?'border-radius:2px;transform:rotate(45deg)':'border-radius:50%')+';"></div>'+
+    '</div>',
+    iconSize:[sz,sz],iconAnchor:[h,h],className:''});
 }
 
-function makePopup(c) {
-  var tc = TC[c.tag] || TC.tension;
-  var linksHtml = '';
-  if (c.links && c.links.length) {
-    linksHtml += '<div class="p-section"><div class="p-section-label">// FUENTES & TRACKERS</div><div class="p-links">';
-    c.links.forEach(function(lnk){
-      linksHtml += '<a class="p-link" href="'+lnk.u+'" target="_blank" rel="noopener" style="color:'+lnk.c+';border-color:'+lnk.c+'40;background:'+lnk.c+'12">'+lnk.l+'</a>';
-    });
-    linksHtml += '</div></div>';
-  }
-  if (c.xlinks && c.xlinks.length) {
-    linksHtml += '<div class="p-section"><div class="p-section-label">// CUENTAS X / OSINT</div><div class="p-links">';
-    c.xlinks.forEach(function(xl){
-      linksHtml += '<a class="p-link xl" href="'+xl.u+'" target="_blank" rel="noopener" style="color:#1d9bf0;border-color:#1d9bf040;background:#1d9bf012">'+xl.l+'</a>';
-    });
-    linksHtml += '</div></div>';
-  }
-  return '<div class="p-title" style="color:'+tc.fill+'">'+c.title+'</div>' +
-    '<span class="p-tag" style="background:'+tc.bg+';color:'+tc.fill+';border:1px solid '+tc.fill+'40">'+c.tag.toUpperCase()+'</span>' +
-    '<div class="p-desc">'+c.desc+'</div>' +
-    '<div class="p-kpis">' +
-      '<div class="p-kpi"><div class="p-kpi-val" style="color:'+tc.fill+'">'+c.kpis.int+'/100</div><div class="p-kpi-label">Intensidad</div></div>' +
-      '<div class="p-kpi"><div class="p-kpi-val" style="color:'+tc.fill+'">'+c.kpis.alertas+'</div><div class="p-kpi-label">Alertas hoy</div></div>' +
-      '<div class="p-kpi"><div class="p-kpi-val" style="color:'+tc.fill+'">'+c.kpis.paises+'</div><div class="p-kpi-label">Países</div></div>' +
-    '</div>' +
-    linksHtml;
+function popup(c){
+  var tc=TC[c.tag]||TC.tension;
+  var ls=''; c.links.forEach(function(x){ls+='<a class="plink" href="'+x.u+'" target="_blank" rel="noopener" style="color:'+x.c+';border-color:'+x.c+'40;background:'+x.c+'12">'+x.l+'</a>';});
+  var xs=''; c.xl.forEach(function(x){xs+='<a class="pxlink" href="'+x.u+'" target="_blank" rel="noopener">'+x.n+'</a>';});
+  return '<div class="pt" style="color:'+tc.f+'">'+c.title+'</div>'+
+    '<span class="ptag" style="background:'+tc.b+';color:'+tc.f+';border:1px solid '+tc.f+'40">'+c.tag.toUpperCase()+'</span>'+
+    '<div class="pdesc">'+c.desc+'</div>'+
+    '<div class="pkpis">'+
+      '<div class="pkpi"><div class="pkpiv" style="color:'+tc.f+'">'+c.int+'/100</div><div class="pkpil">Intensidad</div></div>'+
+      '<div class="pkpi"><div class="pkpiv" style="color:'+tc.f+'">'+c.alertas+'</div><div class="pkpil">Alertas hoy</div></div>'+
+      '<div class="pkpi"><div class="pkpiv" style="color:'+tc.f+'">'+c.paises+'</div><div class="pkpil">Países</div></div>'+
+    '</div>'+
+    '<div class="psec"><div class="psecl">// FUENTES & TRACKERS</div><div class="plinks">'+ls+'</div></div>'+
+    '<div class="psec"><div class="psecl" style="color:#1d9bf0;">𝕏 CUENTAS X / OSINT</div><div class="plinks">'+xs+'</div></div>'+
+    '<div style="font-family:Share Tech Mono,monospace;font-size:9px;color:#3d5470;margin-top:4px">REGIÓN: '+c.region+'</div>';
 }
 
-function renderConflicts() {
-  Object.values(activeMarkers).forEach(function(m){map.removeLayer(m);});
-  activeMarkers = {};
-  conflicts.forEach(function(c) {
-    if (!activeTags[c.tag]) return;
-    var tc = TC[c.tag] || TC.tension;
-    var icon = createPulseIcon(c.tag, c.intensity);
-    var marker = L.marker([c.lat, c.lng], {icon:icon}).addTo(map);
-    L.circle([c.lat, c.lng], {
-      radius:80000 + c.intensity*4000,
-      color:tc.fill, fillColor:tc.fill, fillOpacity:0.05, opacity:0.18, weight:1
-    }).addTo(map);
-    marker.bindPopup(makePopup(c), {maxWidth:320});
-    activeMarkers[c.id] = marker;
+function drawMap(){
+  for(var k in markers)map.removeLayer(markers[k]);
+  markers={};
+  CF.forEach(function(c){
+    if(!active[c.tag])return;
+    var tc=TC[c.tag]||TC.tension;
+    var m=L.marker([c.lat,c.lng],{icon:icon(c.tag,c.int)}).addTo(map);
+    L.circle([c.lat,c.lng],{radius:80000+c.int*4000,color:tc.f,fillColor:tc.f,fillOpacity:.05,opacity:.18,weight:1}).addTo(map);
+    m.bindPopup(popup(c),{maxWidth:300});
+    markers[c.id]=m;
   });
 }
 
-function initMap() {
-  map = L.map('leaflet-map', {center:[20,20],zoom:2,zoomControl:true,attributionControl:false,minZoom:2,maxZoom:12});
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18}).addTo(map);
-  renderConflicts();
+function flyTo(id){
+  var c=null; for(var i=0;i<CF.length;i++){if(CF[i].id===id){c=CF[i];break;}}
+  if(!c)return;
+  map.flyTo([c.lat,c.lng],5,{duration:1.2});
+  setTimeout(function(){if(markers[id])markers[id].openPopup();},1300);
 }
 
-function toggleTag(btn) {
-  var tag = btn.dataset.tag;
-  activeTags[tag] = !activeTags[tag];
-  btn.classList.toggle('active', activeTags[tag]);
-  renderConflicts();
+function toggleTag(btn){
+  var t=btn.dataset.t;
+  active[t]=active[t]?0:1;
+  btn.classList.toggle('on',!!active[t]);
+  drawMap();
 }
 
-// ================================================================
+function initMap(){
+  map=L.map('map',{center:[20,20],zoom:2,zoomControl:true,attributionControl:false,minZoom:2,maxZoom:12});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(map);
+  drawMap();
+}
+
+// ═══════════════════════════════════════════════
 // LIVE CHANNELS
-// ================================================================
-function initLive() {
-  var bar = document.getElementById('live-bar');
-  CHANNELS.forEach(function(ch, i) {
-    var btn = document.createElement('button');
-    btn.className = 'live-btn' + (i===0?' active':'');
-    btn.textContent = ch.label;
-    btn.addEventListener('click', function() {
-      document.querySelectorAll('.live-btn').forEach(function(b){b.classList.remove('active');});
-      btn.classList.add('active');
-      document.getElementById('live-iframe').src = ch.embed;
-      document.getElementById('live-direct').href = ch.direct;
-      document.getElementById('live-direct').textContent = 'abrir ' + ch.label + ' en YouTube ↗';
-    });
+// ═══════════════════════════════════════════════
+function initLive(){
+  var bar=document.getElementById('chanbtns');
+  CH.forEach(function(ch,i){
+    var btn=document.createElement('button');
+    btn.className='cbtn'+(i===0?' on':'');
+    btn.textContent=ch.n;
+    btn.onclick=function(){
+      document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('on');});
+      btn.classList.add('on');
+      document.getElementById('vframe').src='https://www.youtube.com/embed/'+ch.id+'?autoplay=1&mute=1&rel=0';
+      document.getElementById('vdirect').href='https://www.youtube.com/watch?v='+ch.id;
+      document.getElementById('vdirect').textContent='abrir '+ch.n+' en YouTube ↗';
+    };
     bar.appendChild(btn);
   });
-  document.getElementById('live-iframe').src = CHANNELS[0].embed;
-  document.getElementById('live-direct').href = CHANNELS[0].direct;
+  document.getElementById('vframe').src='https://www.youtube.com/embed/'+CH[0].id+'?autoplay=1&mute=1&rel=0';
+  document.getElementById('vdirect').href='https://www.youtube.com/watch?v='+CH[0].id;
+  // Show fallback message if iframe fails to load
+  document.getElementById('vframe').onerror = function(){ document.getElementById('livelink').style.background='rgba(255,61,87,.1)'; };
 }
 
-// ================================================================
-// CONFLICT CARDS
-// ================================================================
-function initCards() {
-  var container = document.getElementById('cards-scroll');
-  conflictCards.forEach(function(card) {
-    var tc = TC[card.tag] || TC.tension;
-    var div = document.createElement('div');
-    div.className = 'ccard';
-    div.style.borderLeftColor = card.color;
+// ═══════════════════════════════════════════════
+// X ACCOUNTS BLOCK
+// ═══════════════════════════════════════════════
+function initXBlock(){
+  var tabsEl=document.getElementById('xtabs');
+  var accsEl=document.getElementById('xaccounts');
 
-    // top
-    var top = '<div class="ccard-top">' +
-      '<div class="ccard-dot" style="background:'+card.color+';box-shadow:0 0 6px '+card.color+'"></div>' +
-      '<div class="ccard-name" style="color:'+card.color+'">'+card.name+'</div>' +
-      '<span class="ccard-tag" style="background:'+tc.bg+';color:'+card.color+'">'+card.tag.toUpperCase()+'</span>' +
-      '</div>';
-
-    // KPIs
-    var kpisHtml = '<div class="ccard-kpis">';
-    card.kpis.forEach(function(k){
-      kpisHtml += '<div class="ckpi"><div class="ckpi-val" style="color:'+card.color+'">'+k.val+'</div><div class="ckpi-label">'+k.label+'</div></div>';
+  function showGroup(idx){
+    accsEl.innerHTML='';
+    document.querySelectorAll('.xtab').forEach(function(t){t.classList.remove('on');});
+    tabsEl.children[idx].classList.add('on');
+    XGROUPS[idx].accounts.forEach(function(a){
+      var link=document.createElement('a');
+      link.className='xacc'; link.href=a.u; link.target='_blank'; link.rel='noopener'; link.textContent=a.n;
+      accsEl.appendChild(link);
     });
-    kpisHtml += '</div>';
-
-    // bar
-    var barHtml = '<div class="ccard-bar"><div class="ccard-bar-fill" data-w="'+card.intensity+'%" style="width:0%;background:'+card.color+'"></div></div>';
-
-    // links section
-    var linksHtml = '<div class="ccard-section"><div class="ccard-section-label">// FUENTES & TRACKERS</div><div class="ccard-links">';
-    card.links.forEach(function(lnk){
-      linksHtml += '<a class="clink" href="'+lnk.u+'" target="_blank" rel="noopener" style="color:'+lnk.c+';border-color:'+lnk.c+'40;background:'+lnk.c+'12">'+lnk.l+'</a>';
-    });
-    linksHtml += '</div></div>';
-
-    // X section — prominent, with ✕ icon
-    var xHtml = '<div class="ccard-section ccard-xsection"><div class="ccard-section-label" style="color:#1d9bf0;">𝕏 CUENTAS OSINT EN X</div><div class="ccard-links">';
-    card.xlinks.forEach(function(xl){
-      xHtml += '<a class="clink x-account" href="'+xl.u+'" target="_blank" rel="noopener" '
-             + 'style="color:#1d9bf0;border-color:#1d9bf060;background:#1d9bf018;font-size:11px;">'+xl.l+'</a>';
-    });
-    xHtml += '</div></div>';
-
-    div.innerHTML = top + kpisHtml + barHtml + linksHtml + xHtml;
-
-    // click on card body (not links) → fly map
-    var cid = card.conflictId;
-    div.addEventListener('click', function(e) {
-      if (e.target.tagName === 'A') return;
-      var c = null;
-      for (var i=0;i<conflicts.length;i++){if(conflicts[i].id===cid){c=conflicts[i];break;}}
-      if (!c) return;
-      map.flyTo([c.lat, c.lng], 5, {duration:1.2});
-      setTimeout(function(){
-        if (activeMarkers[cid]) activeMarkers[cid].openPopup();
-      }, 1300);
-    });
-
-    container.appendChild(div);
-  });
-
-  setTimeout(function(){
-    document.querySelectorAll('.ccard-bar-fill').forEach(function(b){
-      b.style.width = b.getAttribute('data-w');
-    });
-  }, 700);
-}
-
-// ================================================================
-// RIGHT PANEL — situations list
-// ================================================================
-function renderEvents() {
-  var container = document.getElementById('events-list');
-  document.getElementById('event-count').textContent = conflicts.length + ' ACTIVOS';
-  var sorted = conflicts.slice().sort(function(a,b){return b.intensity-a.intensity;});
-  sorted.forEach(function(c) {
-    var tc = TC[c.tag] || TC.tension;
-    var el = document.createElement('div');
-    el.className = 'event-item';
-
-    // mini links (2-3 key ones)
-    var miniLinks = (c.links||[]).slice(0,3).map(function(lnk){
-      return '<a class="ei-link" href="'+lnk.u+'" target="_blank" rel="noopener" style="color:'+lnk.c+';border-color:'+lnk.c+'40;background:'+lnk.c+'10" onclick="event.stopPropagation()">'+lnk.l+'</a>';
-    }).join('');
-    var miniX = (c.xlinks||[]).slice(0,2).map(function(xl){
-      return '<a class="ei-link" href="'+xl.u+'" target="_blank" rel="noopener" style="color:#1d9bf0;border-color:#1d9bf030;background:#1d9bf010;border-radius:8px" onclick="event.stopPropagation()">'+xl.l+'</a>';
-    }).join('');
-
-    el.innerHTML =
-      '<div class="ei-row1">' +
-        '<span class="ei-tag" style="background:'+tc.bg+';color:'+tc.fill+'">'+c.tag.toUpperCase()+'</span>' +
-        '<span class="ei-region">'+c.region+'</span>' +
-        '<span class="ei-int" style="color:'+tc.fill+'">'+c.intensity+'</span>' +
-      '</div>' +
-      '<div class="ei-title">'+c.title+'</div>' +
-      '<div class="ei-desc">'+c.desc.substring(0,80)+'</div>' +
-      '<div class="ei-kpis">' +
-        '<div class="ei-kpi"><div class="ei-kpi-val" style="color:'+tc.fill+'">'+c.kpis.int+'/100</div><div class="ei-kpi-label">INT.</div></div>' +
-        '<div class="ei-kpi"><div class="ei-kpi-val" style="color:'+tc.fill+'">'+c.kpis.alertas+'</div><div class="ei-kpi-label">ALERTAS</div></div>' +
-        '<div class="ei-kpi"><div class="ei-kpi-val" style="color:'+tc.fill+'">'+c.kpis.paises+'</div><div class="ei-kpi-label">PAÍSES</div></div>' +
-      '</div>' +
-      '<div class="ei-links">'+miniLinks+miniX+'</div>';
-
-    el.addEventListener('click', function() {
-      map.flyTo([c.lat, c.lng], 5, {duration:1.2});
-      var id = c.id;
-      setTimeout(function(){if(activeMarkers[id])activeMarkers[id].openPopup();}, 1300);
-    });
-    container.appendChild(el);
-  });
-}
-
-// ================================================================
-// INTENSITY
-// ================================================================
-function renderIntensity() {
-  var p = document.getElementById('intensity-panel');
-  var rows = document.createElement('div');
-  intensityData.forEach(function(d){
-    var r = document.createElement('div');
-    r.className = 'intensity-row';
-    r.innerHTML = '<span class="ir-name">'+d.region+'</span>' +
-      '<div class="ir-bar-bg"><div class="ir-bar" data-target="'+d.val+'" style="width:0%;background:'+d.color+'"></div></div>' +
-      '<span class="ir-val">'+d.val+'</span>';
-    rows.appendChild(r);
-  });
-  p.appendChild(rows);
-  setTimeout(function(){
-    document.querySelectorAll('.ir-bar').forEach(function(b){b.style.width=b.getAttribute('data-target')+'%';});
-  }, 800);
-}
-
-// ================================================================
-// TENSION METER
-// ================================================================
-function initTensionMeter() {
-  setTimeout(function(){
-    document.getElementById('tension-fill').style.width = '78%';
-    document.getElementById('tension-needle').style.left = '78%';
-  }, 500);
-}
-
-// ================================================================
-// TICKER — each item is clickable
-// ================================================================
-function renderTicker() {
-  var inner = document.getElementById('ticker-inner');
-  var html = tickerLinks.map(function(item){
-    return '<span class="ticker-item" onclick="window.open(\''+item.u+'\',\'_blank\')">'+item.t+'</span>' +
-           '<span class="ticker-sep">◆</span>';
-  }).join('');
-  inner.innerHTML = html + html;
-}
-
-// ================================================================
-// CLOCK
-// ================================================================
-function updateClock() {
-  var n = new Date();
-  document.getElementById('clock').textContent =
-    String(n.getUTCHours()).padStart(2,'0')+':'+
-    String(n.getUTCMinutes()).padStart(2,'0')+':'+
-    String(n.getUTCSeconds()).padStart(2,'0')+' UTC';
-  if (Math.random() < 0.002) {
-    var el = document.getElementById('alert-count');
-    if (el) el.textContent = parseInt(el.textContent) + 1;
   }
+
+  XGROUPS.forEach(function(g,i){
+    var tab=document.createElement('span');
+    tab.className='xtab'; tab.textContent=g.label;
+    tab.onclick=function(){showGroup(i);};
+    tabsEl.appendChild(tab);
+  });
+  showGroup(0);
 }
 
-// ================================================================
+// ═══════════════════════════════════════════════
+// CONFLICT CARDS
+// ═══════════════════════════════════════════════
+function initCards(){
+  var cont=document.getElementById('cardsscroll');
+  CARDS.forEach(function(card){
+    var tc=TC[card.tag]||TC.tension;
+    var d=document.createElement('div');
+    d.className='cc'; d.style.borderLeftColor=card.color;
+
+    var kh='<div class="cckpis">';
+    card.kpis.forEach(function(k){kh+='<div class="cck"><div class="cckv" style="color:'+card.color+'">'+k.v+'</div><div class="cckl">'+k.l+'</div></div>';});
+    kh+='</div>';
+
+    var lh='<div class="ccsec"><div class="ccsecl">// FUENTES & TRACKERS</div><div class="cclinks">';
+    card.links.forEach(function(lnk){lh+='<a class="cclink" href="'+lnk.u+'" target="_blank" rel="noopener" style="color:'+lnk.c+';border-color:'+lnk.c+'40;background:'+lnk.c+'12">'+lnk.l+'</a>';});
+    lh+='</div></div>';
+
+    d.innerHTML=
+      '<div class="cctop">'+
+        '<div class="ccdot" style="background:'+card.color+';box-shadow:0 0 6px '+card.color+'"></div>'+
+        '<div class="ccname" style="color:'+card.color+'">'+card.name+'</div>'+
+        '<span class="cctag" style="background:'+tc.b+';color:'+card.color+'">'+card.tag.toUpperCase()+'</span>'+
+      '</div>'+
+      kh+
+      '<div class="ccbar"><div class="ccbarf" data-w="'+card.int+'%" style="width:0%;background:'+card.color+'"></div></div>'+
+      lh;
+
+    var cid=card.cid;
+    d.addEventListener('click',function(e){if(e.target.tagName==='A')return; flyTo(cid);});
+    cont.appendChild(d);
+  });
+  setTimeout(function(){document.querySelectorAll('.ccbarf').forEach(function(b){b.style.width=b.getAttribute('data-w');});},700);
+}
+
+// ═══════════════════════════════════════════════
+// RIGHT PANEL
+// ═══════════════════════════════════════════════
+function initEvents(){
+  var cont=document.getElementById('evlist');
+  document.getElementById('evcnt').textContent=CF.length+' ACTIVOS';
+  var sorted=CF.slice().sort(function(a,b){return b.int-a.int;});
+  sorted.forEach(function(c){
+    var tc=TC[c.tag]||TC.tension;
+    var el=document.createElement('div'); el.className='ev';
+    var ml=c.links.slice(0,2).map(function(x){return '<a class="evlink" href="'+x.u+'" target="_blank" rel="noopener" style="color:'+x.c+';border-color:'+x.c+'40;background:'+x.c+'10" onclick="event.stopPropagation()">'+x.l+'</a>';}).join('');
+    var mx=c.xl.slice(0,2).map(function(x){return '<a class="evlink" href="'+x.u+'" target="_blank" rel="noopener" style="color:#1d9bf0;border-color:#1d9bf030;background:#1d9bf010;border-radius:8px" onclick="event.stopPropagation()">'+x.n+'</a>';}).join('');
+    el.innerHTML=
+      '<div class="evr1"><span class="evtag" style="background:'+tc.b+';color:'+tc.f+'">'+c.tag.toUpperCase()+'</span><span class="evreg">'+c.region+'</span><span class="evint" style="color:'+tc.f+'">'+c.int+'</span></div>'+
+      '<div class="evtit">'+c.title+'</div>'+
+      '<div class="evdesc">'+c.desc.substring(0,75)+'</div>'+
+      '<div class="evkpis"><div class="evkpi"><div class="evkpiv" style="color:'+tc.f+'">'+c.int+'/100</div><div class="evkpil">INT.</div></div><div class="evkpi"><div class="evkpiv" style="color:'+tc.f+'">'+c.alertas+'</div><div class="evkpil">ALERTAS</div></div><div class="evkpi"><div class="evkpiv" style="color:'+tc.f+'">'+c.paises+'</div><div class="evkpil">PAÍSES</div></div></div>'+
+      '<div class="evlinks">'+ml+mx+'</div>';
+    el.addEventListener('click',function(){flyTo(c.id);});
+    cont.appendChild(el);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// INTENSITY
+// ═══════════════════════════════════════════════
+function initIntensity(){
+  var p=document.getElementById('intpane');
+  INTDATA.forEach(function(d){
+    var r=document.createElement('div'); r.className='intr';
+    r.innerHTML='<span class="intn">'+d.r+'</span><div class="intbg"><div class="intb" data-v="'+d.v+'%" style="width:0%;background:'+d.c+'"></div></div><span class="intv">'+d.v+'</span>';
+    p.appendChild(r);
+  });
+  setTimeout(function(){document.querySelectorAll('.intb').forEach(function(b){b.style.width=b.getAttribute('data-v');});},800);
+}
+
+// ═══════════════════════════════════════════════
+// TICKER
+// ═══════════════════════════════════════════════
+function initTicker(){
+  var inner=document.getElementById('tkinner');
+  var h=TICKERS.map(function(t){return '<span class="tki" onclick="window.open(\''+t.u+'\',\'_blank\')">'+t.t+'</span><span class="tks">◆</span>';}).join('');
+  inner.innerHTML=h+h;
+}
+
+// ═══════════════════════════════════════════════
+// CLOCK
+// ═══════════════════════════════════════════════
+function tick(){
+  var n=new Date();
+  document.getElementById('clock').textContent=String(n.getUTCHours()).padStart(2,'0')+':'+String(n.getUTCMinutes()).padStart(2,'0')+':'+String(n.getUTCSeconds()).padStart(2,'0')+' UTC';
+  if(Math.random()<.002){var e=document.getElementById('alcnt');if(e)e.textContent=+e.textContent+1;}
+}
+
+// ═══════════════════════════════════════════════
 // BOOT
-// ================================================================
-window.addEventListener('load', function() {
-  initMap();
-  initLive();
-  initCards();
-  renderEvents();
-  renderIntensity();
-  renderTicker();
-  initTensionMeter();
-  updateClock();
-  setInterval(updateClock, 1000);
+// ═══════════════════════════════════════════════
+window.addEventListener('load',function(){
+  initMap(); initLive(); initXBlock(); initCards(); initEvents(); initIntensity(); initTicker();
+  tick(); setInterval(tick,1000);
+  setTimeout(function(){
+    document.getElementById('tfill').style.width='78%';
+    document.getElementById('tneedle').style.left='78%';
+  },500);
 });
 </script>
 </body>
