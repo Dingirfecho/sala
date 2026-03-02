@@ -130,7 +130,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px
 .wc-lbl{position:absolute;bottom:0;left:0;right:0;padding:3px 6px;background:linear-gradient(transparent,rgba(0,0,0,.85));font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:1px;color:#fff;display:flex;align-items:center;gap:3px;}
 .wc-dot{width:5px;height:5px;border-radius:50%;background:var(--red);animation:blink 1.5s infinite;flex-shrink:0;}
 .wc.dead{background:#0a0c10;}
-.wc.dead::after{content:"OFFLINE";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;color:var(--t3);letter-spacing:2px;}
+.wc.dead::after{content:"SIGNAL LOST · CLICK TO OPEN";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:7px;color:var(--t3);letter-spacing:1.5px;cursor:pointer;}
 
 /* AI panel */
 #ai-panel{width:258px;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;}
@@ -181,6 +181,16 @@ body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px
 .src-w{padding:8px;}
 .s-chip{display:inline-block;font-family:var(--cond);font-size:10px;font-weight:600;padding:3px 9px;border-radius:2px;border:1px solid;margin:3px 3px 0 0;transition:filter .15s;}
 .s-chip:hover{filter:brightness(1.5);}
+
+/* === X OSINT BAR — always visible === */
+#x-bar{background:var(--s1);border-bottom:2px solid var(--b3);}
+#x-bar .xph{flex-shrink:0;height:32px;padding:0 10px;background:var(--s2);border-bottom:1px solid var(--b2);display:flex;align-items:center;gap:8px;}
+#x-bar-tabs{display:flex;gap:3px;padding:5px 10px;border-bottom:1px solid var(--b2);background:var(--s2);flex-wrap:wrap;}
+.xct{font-family:var(--cond);font-size:10px;font-weight:700;padding:2px 10px;border-radius:2px;border:1px solid var(--b2);color:var(--t3);transition:all .15s;text-transform:uppercase;cursor:pointer;}
+.xct.on{background:#1d9bf0;color:#fff;border-color:#1d9bf0;}
+#x-accts{padding:10px;display:flex;flex-wrap:wrap;gap:5px;}
+.xa{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:11px;padding:5px 12px;border-radius:20px;color:#1d9bf0;border:1px solid #1d9bf035;background:#1d9bf008;transition:all .18s;cursor:pointer;text-decoration:none;}
+.xa:hover{background:#1d9bf020;border-color:#1d9bf0;box-shadow:0 0 12px rgba(29,155,240,.15);}
 
 /* TICKER */
 #ticker{position:sticky;bottom:0;z-index:900;height:26px;background:rgba(7,9,13,.98);border-top:1px solid var(--b2);display:flex;align-items:center;overflow:hidden;}
@@ -291,6 +301,18 @@ body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px
   </div>
 </div>
 
+<!-- X OSINT BAR — always visible -->
+<div id="x-bar">
+  <div class="xph">
+    <span style="font-size:14px;font-weight:700;color:#1d9bf0;">𝕏</span>
+    <span style="font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#1d9bf0">OSINT FEEDS</span>
+    <span class="live-badge">● LIVE</span>
+    <span id="x-count" style="font-family:var(--mono);font-size:8px;color:var(--t3);margin-left:auto;"></span>
+  </div>
+  <div id="x-bar-tabs"></div>
+  <div id="x-accts"></div>
+</div>
+
 <!-- FEED GRID -->
 <div id="feed-grid"></div>
 
@@ -309,15 +331,15 @@ var LAYERS_DEF=[{id:"iran",nm:"IRAN ATTACKS",ico:"🎯",c:"#ff9100",on:true},{id
 // Fallback: show direct link button.
 // Channel IDs (UCxxxx format) for reliable embed:
 var YT=[
-  {n:"Bloomberg",  cid:"UCrM7B7SL_g1edFOnmj-SDKg", dir:"https://www.youtube.com/@BloombergTV/live"},
-  {n:"Sky News",   cid:"UCoMdktPbSTixAyNGwb-UYkQ",  dir:"https://www.youtube.com/@SkyNews/live"},
-  {n:"Euronews",   cid:"UCW5QnvGidLzwORYRpFIEWog",  dir:"https://www.youtube.com/@euronews/live"},
-  {n:"DW",         cid:"UCknLrEdhRCp1aegoMqRaCZg",  dir:"https://www.youtube.com/@dwnews/live"},
-  {n:"CNBC",       cid:"UCvJJ_dzjViJCoLf5uKUTwoA",  dir:"https://www.youtube.com/@CNBC/live"},
-  {n:"CNN",        cid:"UCupvZG-5ko_eiXAupbDfxWw",  dir:"https://www.youtube.com/@CNN/live"},
-  {n:"France24",   cid:"UCQfwfsi5VrQ8yKZ-UWmAqBA",  dir:"https://www.youtube.com/@FRANCE24/live"},
-  {n:"AlJazeera",  cid:"UCNye-wNBqNL5ZzHSJdse4ug",  dir:"https://www.youtube.com/@AlJazeeraEnglish/live"},
-  {n:"AlArabiya",  cid:"UCnUYZLuoy1rq1aVMwx4aTzw",  dir:"https://www.youtube.com/@AlArabiya/live"},
+  {n:"Bloomberg",  vid:"dp8PhLsUcFE", dir:"https://www.youtube.com/@BloombergTV/live"},
+  {n:"Sky News",   vid:"9Auq9mYxFEE", dir:"https://www.youtube.com/@SkyNews/live"},
+  {n:"Euronews",   vid:"pFsSOQfRwGQ", dir:"https://www.youtube.com/@euronews/live"},
+  {n:"DW",         vid:"GE_SfNbCI2o", dir:"https://www.youtube.com/@dwnews/live"},
+  {n:"CNBC",       vid:"9NyxcM1G5ho", dir:"https://www.youtube.com/@CNBC/live"},
+  {n:"CNN",        vid:"hCKDFMpPsJA", dir:"https://www.youtube.com/@CNN/live"},
+  {n:"France24",   vid:"Ap-UM1O9RBk", dir:"https://www.youtube.com/@FRANCE24/live"},
+  {n:"AlJazeera",  vid:"gCNeDWCI0vo", dir:"https://www.youtube.com/@AlJazeeraEnglish/live"},
+  {n:"AlArabiya",  vid:"5FaTaOaOl0s", dir:"https://www.youtube.com/@AlArabiya/live"},
 ];
 var curCh=0;
 // Webcams: using Windy.com public webcam thumbnails (no hotlink blocking)
@@ -383,8 +405,8 @@ function loadYT(chi){
   var f=document.getElementById("tv-iframe");
   var e=document.getElementById("tv-err");
   f.style.display="block"; e.classList.remove("show");
-  // Use channel live_stream embed — works without knowing video ID
-  f.src="https://www.youtube.com/embed/live_stream?channel="+ch.cid+"&autoplay=1&mute=1&rel=0&modestbranding=1&enablejsapi=1";
+  // Use direct video ID embed — much more reliable
+  f.src="https://www.youtube.com/embed/"+ch.vid+"?autoplay=1&mute=1&rel=0&modestbranding=1";
   document.getElementById("tv-link").href=ch.dir;
   document.getElementById("tv-link").textContent="↗ "+ch.n+" en YouTube";
   document.getElementById("tv-err-btn").href=ch.dir;
@@ -419,10 +441,46 @@ function renderWcams(){var g=document.getElementById("wcam-grid");g.innerHTML=""
 function buildTheaters(){var el=document.getElementById("theaters");THEATERS.forEach(function(t){var d=document.createElement("div");d.className="ai-th";d.style.borderLeftColor=t.c;d.innerHTML="<div class='ai-th-t' style='color:"+t.c+"'>"+t.n+"<span class='ai-crit' style='background:"+t.c+"'>"+t.sev+"</span></div><div class='ai-row'>AIR ✈ <b>"+t.air+"</b> &nbsp; SEA ⚓ <b>"+t.sea+"</b> &nbsp; BUQUES <b>"+t.ves+"</b></div><div class='ai-row' style='color:"+t.c+"'>"+t.trend+"</div>";el.appendChild(d);});}
 function buildInstability(){var el=document.getElementById("instability");INSTABILITY.forEach(function(d){var row=document.createElement("div");row.className="ir";row.innerHTML="<span class='ir-nm'>"+d.n+"</span><div class='ir-bg'><div class='ir-fill' data-v='"+d.v+"' style='background:"+d.c+"'></div></div><span class='ir-v'>"+d.v+"</span><span class='ir-a' style='color:"+d.c+"'>"+d.a+"</span>";el.appendChild(row);});setTimeout(function(){document.querySelectorAll(".ir-fill").forEach(function(b){b.style.width=b.dataset.v+"%";});},600);}
 
+// X OSINT — categorized accounts for dedicated bar
+var X_CATS={
+  "GENERAL OSINT":["IntelCrab","OSINTdefender","GeoConfirmed","Conflicts","sentdefender","BNONews","Faytuks"],
+  "UCRANIA/RUSIA":["RALee85","UAWeapons","War_Mapper","KofmanMichael","WarMonitor3","Prune602"],
+  "MEDIO ORIENTE":["MiddleEastEye","HawzhinOzodi","TankerTrackers","Charles_Lister","AuroraIntel"],
+  "INDO-PACÍFICO":["MT_Anderson","detikiw","IndoPac_Info"],
+  "NUCLEAR/ARMAS":["ArmsControlWonk","nukestrat","naborman"],
+};
+var curXCat=Object.keys(X_CATS)[0];
+function buildXBar(){
+  var tabs=document.getElementById("x-bar-tabs");
+  var keys=Object.keys(X_CATS);
+  var allH={};keys.forEach(function(k){X_CATS[k].forEach(function(h){allH[h]=1;});});
+  document.getElementById("x-count").textContent=Object.keys(allH).length+" cuentas monitoreadas";
+  keys.forEach(function(cat,i){
+    var btn=document.createElement("button");btn.className="xct"+(i===0?" on":"");btn.textContent=cat;
+    btn.onclick=function(){document.querySelectorAll(".xct").forEach(function(b){b.classList.remove("on");});btn.classList.add("on");curXCat=cat;renderXAccts();};
+    tabs.appendChild(btn);
+  });
+  var allBtn=document.createElement("button");allBtn.className="xct";allBtn.textContent="TODOS";
+  allBtn.onclick=function(){document.querySelectorAll(".xct").forEach(function(b){b.classList.remove("on");});allBtn.classList.add("on");curXCat="ALL";renderXAccts();};
+  tabs.appendChild(allBtn);
+  renderXAccts();
+}
+function renderXAccts(){
+  var area=document.getElementById("x-accts");area.innerHTML="";
+  var list;
+  if(curXCat==="ALL"){list=[];Object.values(X_CATS).forEach(function(a){a.forEach(function(h){if(list.indexOf(h)===-1)list.push(h);});});}
+  else{list=X_CATS[curXCat]||[];}
+  list.forEach(function(h){
+    var a=document.createElement("a");a.className="xa";a.href="https://x.com/"+h;a.target="_blank";a.rel="noopener";
+    a.innerHTML="<span style='font-weight:700'>𝕏</span> @"+h;
+    area.appendChild(a);
+  });
+}
+
 // X RSS
 var xC={};
-function fetchX(h,el){if(xC[h]){renderX(xC[h],h,el);return;}el.innerHTML="<div class='x-load'>Cargando @"+h+"…</div>";var rss="https://rsshub.app/x/user/"+h,px=["https://api.allorigins.win/get?url="+encodeURIComponent(rss),"https://corsproxy.io/?"+encodeURIComponent(rss)];tryX(px,0,h,el);}
-function tryX(px,i,h,el){if(i>=px.length){el.innerHTML="<div class='x-fail'>Sin API Key disponible.<br><a href='https://x.com/"+h+"' target='_blank' rel='noopener'>@"+h+" en X ↗</a></div>";return;}fetch(px[i]).then(function(r){return r.json();}).then(function(d){var xml=d.contents||"";if(typeof xml==="string"&&xml.length>100){var items=parseRSS(xml);if(items.length){xC[h]=items;renderX(items,h,el);return;}}throw 0;}).catch(function(){tryX(px,i+1,h,el);});}
+function fetchX(h,el){if(xC[h]){renderX(xC[h],h,el);return;}el.innerHTML="<div class='x-load'>Cargando @"+h+"…</div>";var rss="https://rsshub.app/x/user/"+h,px=["https://api.allorigins.win/get?url="+encodeURIComponent(rss),"https://corsproxy.io/?"+encodeURIComponent(rss),"https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(rss)];tryX(px,0,h,el);}
+function tryX(px,i,h,el){if(i>=px.length){el.innerHTML="<div class='x-fail'><a href='https://x.com/"+h+"' target='_blank' rel='noopener' style='display:flex;align-items:center;gap:6px;padding:4px 0;color:#1d9bf0'><span style='font-size:14px;font-weight:700'>𝕏</span> @"+h+" → Abrir en X ↗</a><div style='margin-top:4px;font-size:8px;color:var(--t3)'>Feed RSS no disponible — clic para ver en X</div></div>";return;}fetch(px[i]).then(function(r){return r.json();}).then(function(d){var xml=d.contents||"";if(typeof xml==="string"&&xml.length>100){var items=parseRSS(xml);if(items.length){xC[h]=items;renderX(items,h,el);return;}}throw 0;}).catch(function(){tryX(px,i+1,h,el);});}
 function parseRSS(xml){var out=[];try{var doc=new DOMParser().parseFromString(xml,"text/xml");doc.querySelectorAll("item,entry").forEach(function(n,i){if(i>5)return;var ti=n.querySelector("title"),li=n.querySelector("link"),pu=n.querySelector("pubDate,published,updated");if(ti)out.push({txt:(ti.textContent||"").replace(/<[^>]+>/g,"").trim().slice(0,220),url:li?(li.textContent||li.getAttribute("href")||""):"",time:pu?ago(new Date(pu.textContent)):""});});}catch(e){}return out;}
 function ago(d){var m=Math.floor((Date.now()-d)/6e4);if(isNaN(m)||m<0)return"";if(m<60)return m+"m";if(m<1440)return Math.floor(m/60)+"h";return Math.floor(m/1440)+"d";}
 function renderX(items,h,el){el.innerHTML="";items.forEach(function(item){var d=document.createElement("div");d.className="xi";d.innerHTML="<div class='xi-top'><a class='xi-h' href='https://x.com/"+h+"' target='_blank' rel='noopener'>@"+h+"</a><span class='xi-t'>"+item.time+"</span></div><div class='xi-txt'>"+item.txt+"</div>"+(item.url?"<a class='xi-lnk' href='"+item.url+"' target='_blank' rel='noopener'>Ver en X ↗</a>":"");el.appendChild(d);});}
@@ -435,7 +493,7 @@ function initTicker(){var inner=document.getElementById("tk-inner"),h=TICKERS.ma
 function initClock(){(function tick(){var n=new Date();document.getElementById("clock").textContent=String(n.getUTCHours()).padStart(2,"0")+":"+String(n.getUTCMinutes()).padStart(2,"0")+":"+String(n.getUTCSeconds()).padStart(2,"0")+" UTC";if(Math.random()<.002){var e=document.getElementById("alcnt");if(e)e.textContent=+e.textContent+1;}setTimeout(tick,1000);})();}
 
 // BOOT
-window.addEventListener("load",function(){initMap();buildLayers();initYT();buildWTabs();buildTheaters();buildInstability();buildGrid();initTicker();initClock();});
+window.addEventListener("load",function(){initMap();buildLayers();initYT();buildWTabs();buildTheaters();buildInstability();buildXBar();buildGrid();initTicker();initClock();});
 </script>
 </body>
 </html>
