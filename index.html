@@ -184,8 +184,9 @@ body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px
 .x-load{font-family:var(--mono);font-size:9px;color:var(--t3);padding:12px;text-align:center;}
 .x-fail{font-family:var(--mono);font-size:9px;color:var(--t3);padding:10px;line-height:1.7;}
 .x-fail a{color:#1d9bf0;}
-.twitter-timeline{display:block!important;}
-.twitter-timeline-rendered iframe{position:relative;z-index:1;}
+.twitter-timeline{display:block!important;min-height:100px;}
+iframe.twitter-timeline-rendered,
+.twitter-timeline-rendered iframe{min-height:200px!important;position:relative!important;z-index:2!important;}
 .src-w{padding:8px;}
 .s-chip{display:inline-block;font-family:var(--cond);font-size:10px;font-weight:600;padding:3px 9px;border-radius:2px;border:1px solid;margin:3px 3px 0 0;transition:filter .15s;}
 .s-chip:hover{filter:brightness(1.5);}
@@ -515,23 +516,59 @@ function renderWcams(){var g=document.getElementById("wcam-grid");g.innerHTML=""
 function buildTheaters(){var el=document.getElementById("theaters");THEATERS.forEach(function(t){var d=document.createElement("div");d.className="ai-th";d.style.borderLeftColor=t.c;d.innerHTML="<div class='ai-th-t' style='color:"+t.c+"'>"+t.n+"<span class='ai-crit' style='background:"+t.c+"'>"+t.sev+"</span></div><div class='ai-row'>AIR ✈ <b>"+t.air+"</b> &nbsp; SEA ⚓ <b>"+t.sea+"</b> &nbsp; BUQUES <b>"+t.ves+"</b></div><div class='ai-row' style='color:"+t.c+"'>"+t.trend+"</div>";el.appendChild(d);});}
 function buildInstability(){var el=document.getElementById("instability");INSTABILITY.forEach(function(d){var row=document.createElement("div");row.className="ir";row.innerHTML="<span class='ir-nm'>"+d.n+"</span><div class='ir-bg'><div class='ir-fill' data-v='"+d.v+"' style='background:"+d.c+"'></div></div><span class='ir-v'>"+d.v+"</span><span class='ir-a' style='color:"+d.c+"'>"+d.a+"</span>";el.appendChild(row);});setTimeout(function(){document.querySelectorAll(".ir-fill").forEach(function(b){b.style.width=b.dataset.v+"%";});},600);}
 
-// X/Twitter — Official Timeline Widget
+// X/Twitter — Try official widget, fallback to styled profile links
 var xC={};
 function fetchX(h,el){
   el.innerHTML="";
+  // Try official Twitter timeline widget first
   var wrapper=document.createElement("div");
-  wrapper.style.cssText="height:300px;overflow-y:auto;background:#000;";
+  wrapper.style.cssText="min-height:200px;background:transparent;position:relative;";
   var a=document.createElement("a");
   a.className="twitter-timeline";
   a.setAttribute("data-theme","dark");
   a.setAttribute("data-chrome","noheader nofooter noborders transparent");
-  a.setAttribute("data-tweet-limit","8");
+  a.setAttribute("data-tweet-limit","5");
+  a.setAttribute("data-width","100%");
   a.href="https://x.com/"+h;
-  a.textContent="Cargando @"+h+"…";
+  a.textContent="";
   wrapper.appendChild(a);
   el.appendChild(wrapper);
-  if(window.twttr&&window.twttr.widgets){window.twttr.widgets.load(wrapper);}
-  else{setTimeout(function(){if(window.twttr&&window.twttr.widgets)window.twttr.widgets.load(wrapper);},2500);}
+  // Try to render widget
+  var widgetLoaded=false;
+  function tryWidget(){
+    if(window.twttr&&window.twttr.widgets){
+      window.twttr.widgets.load(wrapper).then(function(){
+        // Check if an iframe was actually created
+        setTimeout(function(){
+          var iframe=wrapper.querySelector("iframe");
+          if(iframe&&iframe.offsetHeight>50){
+            widgetLoaded=true;
+            console.log("[SALA] X widget OK: @"+h);
+          }else{
+            showXFallback(h,el);
+          }
+        },3000);
+      });
+    }
+  }
+  tryWidget();
+  // Fallback after 5s if widget didn't load
+  setTimeout(function(){
+    if(!widgetLoaded){showXFallback(h,el);}
+  },5000);
+}
+function showXFallback(h,el){
+  console.log("[SALA] X widget failed, showing profile card: @"+h);
+  el.innerHTML="<div style='padding:12px;'>"
+    +"<a href='https://x.com/"+h+"' target='_blank' rel='noopener' style='display:flex;align-items:center;gap:10px;padding:12px;background:#0f1319;border:1px solid #1d9bf030;border-radius:6px;text-decoration:none;transition:border-color .2s;' onmouseover='this.style.borderColor=\"#1d9bf0\"' onmouseout='this.style.borderColor=\"#1d9bf030\"'>"
+    +"<div style='width:40px;height:40px;border-radius:50%;background:#1d9bf015;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;'>𝕏</div>"
+    +"<div>"
+    +"<div style='font-family:var(--cond);font-size:13px;font-weight:700;color:#1d9bf0;'>@"+h+"</div>"
+    +"<div style='font-family:var(--mono);font-size:9px;color:var(--t3);margin-top:2px;'>Ver perfil en X ↗</div>"
+    +"</div>"
+    +"</a>"
+    +"<a href='https://x.com/"+h+"' target='_blank' rel='noopener' style='display:block;margin-top:8px;padding:8px 12px;background:#1d9bf015;border:1px solid #1d9bf030;border-radius:4px;text-align:center;font-family:var(--cond);font-size:11px;font-weight:700;color:#1d9bf0;text-decoration:none;transition:background .2s;' onmouseover='this.style.background=\"#1d9bf025\"' onmouseout='this.style.background=\"#1d9bf015\"'>Abrir @"+h+" en X ↗</a>"
+    +"</div>";
 }
 
 // FEED GRID
