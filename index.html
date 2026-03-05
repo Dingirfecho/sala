@@ -188,19 +188,19 @@ body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px
 .s-chip{display:inline-block;font-family:var(--cond);font-size:10px;font-weight:600;padding:3px 9px;border-radius:2px;border:1px solid;margin:3px 3px 0 0;transition:filter .15s;}
 .s-chip:hover{filter:brightness(1.5);}
 
-/* === X OSINT BAR === */
-#xbar{border-bottom:2px solid var(--b3);background:var(--s1);}
-#xbar-hdr{display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--b2);background:var(--s2);}
-.xbar-logo{font-size:14px;color:#1d9bf0;font-weight:700;}
-.xbar-title{font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:2px;color:#1d9bf0;}
-#xbar-cats{display:flex;gap:4px;margin-left:12px;}
-.xcat{font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:2px;border:1px solid var(--b2);color:var(--t3);background:transparent;transition:all .15s;cursor:pointer;}
+/* === X OSINT PANEL === */
+#xbar{width:140px;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--b2);overflow-y:auto;background:var(--s1);}
+#xbar-hdr{flex-shrink:0;height:32px;padding:0 8px;background:var(--s2);border-bottom:1px solid var(--b2);display:flex;align-items:center;gap:5px;}
+.xbar-logo{font-size:12px;color:#1d9bf0;font-weight:700;}
+.xbar-title{font-family:var(--cond);font-size:10px;font-weight:700;letter-spacing:2px;color:#1d9bf0;}
+#xbar-cats{flex-shrink:0;display:flex;flex-wrap:wrap;gap:2px;padding:4px 6px;border-bottom:1px solid var(--b2);background:var(--s2);}
+.xcat{font-family:var(--mono);font-size:7px;padding:2px 5px;border-radius:2px;border:1px solid var(--b2);color:var(--t3);background:transparent;transition:all .12s;cursor:pointer;letter-spacing:.5px;}
 .xcat.on{background:#1d9bf0;color:#000;border-color:#1d9bf0;font-weight:700;}
 .xcat:hover{border-color:#1d9bf0;color:#1d9bf0;}
-#xbar-accounts{display:flex;flex-wrap:wrap;gap:4px;padding:8px 12px;}
-.xacc{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:12px;color:#1d9bf0;border:1px solid rgba(29,155,240,.25);background:rgba(29,155,240,.06);text-decoration:none;transition:all .15s;cursor:pointer;}
+#xbar-accounts{flex:1;overflow-y:auto;padding:4px;}
+.xacc{display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9px;padding:4px 6px;border-radius:3px;color:#1d9bf0;border:1px solid rgba(29,155,240,.15);background:rgba(29,155,240,.04);text-decoration:none;transition:all .12s;cursor:pointer;margin-bottom:3px;}
 .xacc:hover{background:rgba(29,155,240,.15);border-color:#1d9bf0;}
-.xacc .xdot{width:4px;height:4px;border-radius:50%;background:#1d9bf0;opacity:.5;}
+.xacc .xdot{width:4px;height:4px;border-radius:50%;background:#1d9bf0;opacity:.5;flex-shrink:0;}
 
 /* TICKER */
 #ticker{position:sticky;bottom:0;z-index:900;height:26px;background:rgba(7,9,13,.98);border-top:1px solid var(--b2);display:flex;align-items:center;overflow:hidden;}
@@ -310,17 +310,16 @@ body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px
       <div id="instability"></div>
     </div>
   </div>
-</div>
-
-<!-- X OSINT BAR -->
-<div id="xbar">
-  <div id="xbar-hdr">
-    <span class="xbar-logo">𝕏</span>
-    <span class="xbar-title">OSINT FEEDS</span>
-    <span class="live-badge">● LIVE</span>
+  <!-- X OSINT BAR inside panels -->
+  <div id="xbar">
+    <div id="xbar-hdr">
+      <span class="xbar-logo">𝕏</span>
+      <span class="xbar-title">OSINT</span>
+      <span class="live-badge">● LIVE</span>
+    </div>
     <div id="xbar-cats"></div>
+    <div id="xbar-accounts"></div>
   </div>
-  <div id="xbar-accounts"></div>
 </div>
 
 <!-- FEED GRID -->
