@@ -335,7 +335,6 @@ body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 <script>
 var TC={guerra:{f:"#e5334a",g:"rgba(229,51,74,.4)",bg:"#280009"},crisis:{f:"#e07030",g:"rgba(224,112,48,.4)",bg:"#281400"},tension:{f:"#d4b830",g:"rgba(212,184,48,.4)",bg:"#282000"},naval:{f:"#00d4ff",g:"rgba(0,212,255,.4)",bg:"#002530"},cyber:{f:"#2ec87a",g:"rgba(46,200,122,.4)",bg:"#002515"},nuclear:{f:"#ff9100",g:"rgba(255,145,0,.4)",bg:"#281800"}};
 var LAYERS_DEF=[{id:"iran",nm:"IRAN ATTACKS",ico:"🎯",c:"#ff9100",on:true},{id:"intel",nm:"INTEL HOTSPOTS",ico:"🔥",c:"#e5334a",on:true},{id:"conf",nm:"CONFLICT ZONES",ico:"✖",c:"#e5334a",on:true},{id:"bases",nm:"MILITARY BASES",ico:"🏛",c:"#5a7a9a",on:true},{id:"nuc",nm:"NUCLEAR SITES",ico:"☢",c:"#ff9100",on:true},{id:"gamma",nm:"GAMMA IRRADIATORS",ico:"⚠",c:"#d4b830",on:false},{id:"space",nm:"SPACEPORTS",ico:"🚀",c:"#7c55d4",on:false},{id:"cables",nm:"UNDERSEA CABLES",ico:"〰",c:"#00d4ff",on:false}];
@@ -559,9 +558,21 @@ function renderWcams(){var g=document.getElementById("wcam-grid");g.innerHTML=""
 function buildTheaters(){var el=document.getElementById("theaters");THEATERS.forEach(function(t){var d=document.createElement("div");d.className="ai-th";d.style.borderLeftColor=t.c;d.innerHTML="<div class='ai-th-t' style='color:"+t.c+"'>"+t.n+"<span class='ai-crit' style='background:"+t.c+"'>"+t.sev+"</span></div><div class='ai-row'>AIR ✈ <b>"+t.air+"</b> &nbsp; SEA ⚓ <b>"+t.sea+"</b> &nbsp; BUQUES <b>"+t.ves+"</b></div><div class='ai-row' style='color:"+t.c+"'>"+t.trend+"</div>";el.appendChild(d);});}
 function buildInstability(){var el=document.getElementById("instability");INSTABILITY.forEach(function(d){var row=document.createElement("div");row.className="ir";row.innerHTML="<span class='ir-nm'>"+d.n+"</span><div class='ir-bg'><div class='ir-fill' data-v='"+d.v+"' style='background:"+d.c+"'></div></div><span class='ir-v'>"+d.v+"</span><span class='ir-a' style='color:"+d.c+"'>"+d.a+"</span>";el.appendChild(row);});setTimeout(function(){document.querySelectorAll(".ir-fill").forEach(function(b){b.style.width=b.dataset.v+"%";});},600);}
 
-// X/Twitter — Simple card for feed grid columns
+// X/Twitter — Styled card for feed grid columns
 function fetchX(h,el){
-  el.innerHTML="<div style='padding:10px;'><a href='https://x.com/"+h+"' target='_blank' rel='noopener' style='display:flex;align-items:center;gap:8px;padding:8px;background:rgba(29,155,240,.06);border:1px solid rgba(29,155,240,.2);border-radius:4px;text-decoration:none;'><span style='color:#1d9bf0;font-size:14px;'>𝕏</span><span style='font-family:var(--mono);font-size:10px;color:#1d9bf0;'>@"+h+" ↗</span></a></div>";
+  el.innerHTML="";
+  var d=document.createElement("div");
+  d.style.cssText="padding:8px;";
+  var a=document.createElement("a");
+  a.href="https://x.com/"+h;
+  a.target="_blank";
+  a.rel="noopener";
+  a.style.cssText="display:flex;align-items:center;gap:8px;padding:10px 12px;background:rgba(29,155,240,.08);border:1px solid rgba(29,155,240,.25);border-radius:6px;text-decoration:none;cursor:pointer;transition:all .15s;";
+  a.onmouseover=function(){a.style.background="rgba(29,155,240,.18)";a.style.borderColor="#1d9bf0";};
+  a.onmouseout=function(){a.style.background="rgba(29,155,240,.08)";a.style.borderColor="rgba(29,155,240,.25)";};
+  a.innerHTML="<span style='font-size:16px;color:#1d9bf0;flex-shrink:0;'>𝕏</span><span style='font-family:var(--cond);font-size:12px;font-weight:700;color:#1d9bf0;'>@"+h+"</span><span style='margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--acc);'>Ver posts ↗</span>";
+  d.appendChild(a);
+  el.appendChild(d);
 }
 
 // FEED GRID
@@ -604,18 +615,12 @@ function renderXAccounts(cat){
 function loadXTimeline(h){
   var target=document.getElementById("xo-timeline");
   target.innerHTML="";
-  var tl=document.createElement("a");
-  tl.className="twitter-timeline";
-  tl.setAttribute("data-theme","dark");
-  tl.setAttribute("data-chrome","noheader nofooter noborders transparent");
-  tl.setAttribute("data-tweet-limit","5");
-  tl.setAttribute("data-dnt","true");
-  tl.href="https://twitter.com/"+h;
-  tl.textContent="Cargando posts de @"+h+"…";
-  tl.style.cssText="font-family:var(--mono);font-size:10px;color:var(--t3);display:block;padding:20px;";
-  target.appendChild(tl);
-  if(window.twttr&&window.twttr.widgets){window.twttr.widgets.load(target);}
-  else{setTimeout(function(){if(window.twttr&&window.twttr.widgets)window.twttr.widgets.load(target);},1500);}
+  // Direct iframe to Twitter syndication endpoint (no widgets.js dependency)
+  var iframe=document.createElement("iframe");
+  iframe.src="https://syndication.twitter.com/srv/timeline-profile/screen-name/"+h+"?dnt=true&theme=dark&showHeader=false&showReplies=false&chrome=noheader%20nofooter%20noborders%20transparent";
+  iframe.style.cssText="width:100%;height:500px;border:none;background:var(--bg);";
+  iframe.loading="lazy";
+  target.appendChild(iframe);
 }
 function buildXBar(){
   var cats=document.getElementById("xo-cats");
