@@ -321,14 +321,11 @@ var CH=[
   {n:"Al Jazeera",  yt:"UCNye-wNBqNL5ZzHSJdse4ug",  dir:"https://www.youtube.com/@AlJazeeraEnglish/live"},
   {n:"France24",    yt:"UCQfwfsi5VrQ8yKZ-UWmAqBA",  dir:"https://www.youtube.com/@FRANCE24/live"},
   {n:"DW News",     yt:"UCknLrEdhRCp1aegoMqRaCZg",  dir:"https://www.youtube.com/@dwnews/live"},
-  {n:"Euronews",    yt:"UCW5QnvGidLzwORYRpFIEWog",  dir:"https://www.youtube.com/@euronews/live"},
   {n:"Sky News",    yt:"UCoMdktPbSTixAyNGwb-UYkQ",  dir:"https://www.youtube.com/@SkyNews/live"},
-  {n:"Bloomberg",   yt:"UCrM7B7SL_g1edFOnmj-SDKg",  dir:"https://www.youtube.com/@BloombergTV/live"},
-  {n:"CNN",         yt:"UCupvZG-5ko_eiXAupbDfxWw",  dir:"https://www.youtube.com/@CNN/live"},
-  {n:"AlArabiya",   yt:"UCnUYZLuoy1rq1aVMwx4aTzw",  dir:"https://www.youtube.com/@AlArabiya/live"},
+  {n:"Euronews",    yt:"UCW5QnvGidLzwORYRpFIEWog",  dir:"https://www.youtube.com/@euronews/live"},
   {n:"WION",        yt:"UC_gUM8rL-Lrg6O3adPW9K1g",  dir:"https://www.youtube.com/@WIONews/live"},
-  {n:"TRT World",   yt:"UC7fWeaHhqgM4Lba7FEAL5Xw",  dir:"https://www.youtube.com/@taborttrtworld/live"},
-  {n:"NDTV",        yt:"UCHMm3FLjnpMBdkGMOFoeVMA",  dir:"https://www.youtube.com/@NDTV/live"},
+  {n:"Bloomberg",   yt:"UCrM7B7SL_g1edFOnmj-SDKg",  dir:"https://www.youtube.com/@BloombergTV/live"},
+  {n:"AlArabiya",   yt:"UCnUYZLuoy1rq1aVMwx4aTzw",  dir:"https://www.youtube.com/@AlArabiya/live"},
 ];
 // Webcams: using Windy.com public webcam thumbnails (no hotlink blocking)
 // Format: https://webcams.windy.com/webcams/public/thumb/{id}/full
@@ -392,18 +389,33 @@ var ytCache={}; // yt channelId → videoId
 var firstLiveFound=false;
 
 // Scan a single channel for live stream
+var quotaExhausted=false;
 function scanChannel(idx){
+  if(quotaExhausted)return Promise.resolve();
   var ch=CH[idx];
   var url="https://www.googleapis.com/youtube/v3/search?part=snippet&channelId="+ch.yt+"&type=video&eventType=live&maxResults=1&order=date&key="+YT_KEY;
-  return fetch(url).then(function(r){return r.json();}).then(function(data){
+  return fetch(url).then(function(r){
+    if(r.status===403){
+      quotaExhausted=true;
+      console.log("[SALA] ⚠ API quota exceeded — stopping scan. Cached channels still work.");
+      return null;
+    }
+    return r.json();
+  }).then(function(data){
+    if(!data)return;
+    if(data.error){
+      if(data.error.code===403){
+        quotaExhausted=true;
+        console.log("[SALA] ⚠ API quota exceeded");
+        return;
+      }
+    }
     if(data.items&&data.items.length>0){
       var vid=data.items[0].id.videoId;
       ytCache[ch.yt]=vid;
       console.log("[SALA] ● LIVE:",ch.n,"→",vid);
-      // Mark tab as live
       var dot=document.getElementById("td-"+idx);
       if(dot)dot.classList.add("live");
-      // Auto-play first live channel found
       if(!firstLiveFound){
         firstLiveFound=true;
         playChannel(idx);
@@ -412,7 +424,7 @@ function scanChannel(idx){
       console.log("[SALA] ○ offline:",ch.n);
     }
   }).catch(function(err){
-    console.log("[SALA] ✕ API error:",ch.n,err.message||err);
+    console.log("[SALA] ✕ error:",ch.n,err.message||err);
   });
 }
 
@@ -422,10 +434,14 @@ function scanAll(){
   var promises=CH.map(function(_,i){return scanChannel(i);});
   Promise.all(promises).then(function(){
     if(!firstLiveFound){
-      console.log("[SALA] No live channels found. Showing error.");
+      console.log("[SALA] No live channels found.");
       document.getElementById("tv-loading").classList.remove("show");
       document.getElementById("tv-err").classList.add("show");
-      document.getElementById("tv-err-msg").innerHTML="Ningún canal en vivo en este momento<br>Hacé click en un canal para abrirlo directo";
+      if(quotaExhausted){
+        document.getElementById("tv-err-msg").innerHTML="API YouTube: cuota diaria agotada<br>Probá de nuevo mañana o hacé click en un canal";
+      }else{
+        document.getElementById("tv-err-msg").innerHTML="Ningún canal en vivo ahora<br>Hacé click en un canal para abrirlo";
+      }
     }
   });
 }
@@ -500,11 +516,14 @@ function initTV(){
   });
   // Scan all channels in parallel
   scanAll();
-  // Re-scan every 5 minutes
+  // Re-scan every 30 minutes (conserve API quota: 10k units/day, 100 per search)
   setInterval(function(){
     firstLiveFound=(curCh>=0);
-    CH.forEach(function(ch,i){scanChannel(i);});
-  },300000);
+    CH.forEach(function(ch,i){
+      // Only re-scan channels we haven't found live yet
+      if(!ytCache[ch.yt]){scanChannel(i);}
+    });
+  },1800000);
 }
 
 // WEBCAMS
