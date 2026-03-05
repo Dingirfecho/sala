@@ -109,11 +109,13 @@ body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px
 .tv-tab{font-family:var(--cond);font-size:10px;font-weight:700;letter-spacing:.5px;padding:2px 8px;border-radius:2px;border:1px solid var(--b2);color:var(--t3);background:transparent;transition:all .15s;text-transform:uppercase;}
 .tv-tab.on{background:var(--red);color:#fff;border-color:var(--red);}
 #tv-frame{flex:1;position:relative;background:#000;overflow:hidden;}
-#tv-video{width:100%;height:100%;object-fit:cover;display:block;background:#000;}
+#tv-iframe{width:100%;height:100%;border:none;display:block;}
 #tv-loading{display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--t3);background:#000;z-index:3;flex-direction:column;gap:8px;}
 #tv-loading.show{display:flex;}
 #tv-loading .spin{width:24px;height:24px;border:2px solid var(--b3);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
+.tv-tab .td{width:5px;height:5px;border-radius:50%;display:inline-block;margin-right:3px;background:var(--t3);}
+.tv-tab .td.live{background:var(--grn);box-shadow:0 0 4px var(--grn);}
 .tv-ov{position:absolute;top:6px;left:6px;background:var(--red);color:#fff;font-family:var(--cond);font-size:8px;font-weight:900;letter-spacing:2px;padding:2px 5px;border-radius:1px;animation:blink 1.5s infinite;pointer-events:none;z-index:5;}
 #tv-link{position:absolute;bottom:6px;right:6px;font-family:var(--mono);font-size:9px;color:var(--acc);background:rgba(7,9,13,.88);padding:3px 8px;border-radius:2px;border:1px solid var(--b2);}
 #tv-link:hover{border-color:var(--acc);}
@@ -261,12 +263,12 @@ body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px
     <div id="tv-tabs"></div>
     <div id="tv-frame">
       <div class="tv-ov">● EN VIVO</div>
-      <div id="tv-loading"><div class="spin"></div><span>Conectando…</span></div>
-      <video id="tv-video" autoplay muted playsinline></video>
+      <div id="tv-loading" class="show"><div class="spin"></div><span>Buscando canales en vivo…</span></div>
+      <iframe id="tv-iframe" src="about:blank" allowfullscreen allow="autoplay;encrypted-media"></iframe>
       <a id="tv-link" href="" target="_blank" rel="noopener">↗ Abrir canal</a>
       <div id="tv-err">
         <span style="font-family:var(--mono);font-size:26px;color:var(--t3)">📡</span>
-        <span style="font-family:var(--mono);font-size:9px;color:var(--t3);text-align:center">Canal no disponible<br>o no está en vivo ahora</span>
+        <span style="font-family:var(--mono);font-size:9px;color:var(--t3);text-align:center" id="tv-err-msg">Canal no disponible<br>o no está en vivo ahora</span>
         <a id="tv-err-btn" href="" target="_blank" rel="noopener" class="tv-err-btn">▶ VER DIRECTO</a>
         <span style="font-family:var(--mono);font-size:8px;color:var(--t3)">→ seleccioná otro canal</span>
       </div>
@@ -306,34 +308,24 @@ body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 <script>
 var TC={guerra:{f:"#e5334a",g:"rgba(229,51,74,.4)",bg:"#280009"},crisis:{f:"#e07030",g:"rgba(224,112,48,.4)",bg:"#281400"},tension:{f:"#d4b830",g:"rgba(212,184,48,.4)",bg:"#282000"},naval:{f:"#00d4ff",g:"rgba(0,212,255,.4)",bg:"#002530"},cyber:{f:"#2ec87a",g:"rgba(46,200,122,.4)",bg:"#002515"},nuclear:{f:"#ff9100",g:"rgba(255,145,0,.4)",bg:"#281800"}};
 var LAYERS_DEF=[{id:"iran",nm:"IRAN ATTACKS",ico:"🎯",c:"#ff9100",on:true},{id:"intel",nm:"INTEL HOTSPOTS",ico:"🔥",c:"#e5334a",on:true},{id:"conf",nm:"CONFLICT ZONES",ico:"✖",c:"#e5334a",on:true},{id:"bases",nm:"MILITARY BASES",ico:"🏛",c:"#5a7a9a",on:true},{id:"nuc",nm:"NUCLEAR SITES",ico:"☢",c:"#ff9100",on:true},{id:"gamma",nm:"GAMMA IRRADIATORS",ico:"⚠",c:"#d4b830",on:false},{id:"space",nm:"SPACEPORTS",ico:"🚀",c:"#7c55d4",on:false},{id:"cables",nm:"UNDERSEA CABLES",ico:"〰",c:"#00d4ff",on:false}];
-// Live TV channels — dual source: HLS primary, YouTube API fallback
-// HLS: direct CDN streams (no embed restrictions)
-// YT: uses Data API v3 to find live video ID, then embeds
+// Live TV — YouTube Data API v3 (scan all channels, auto-select first live)
 var YT_KEY="AIzaSyD8BqWIRF5EDSFBi47kwEHUzZv5WX6E29A";
 var CH=[
-  {n:"Al Jazeera",  hls:"https://live-hls-web-aje.getaj.net/AJE/index.m3u8",
-                    yt:"UCNye-wNBqNL5ZzHSJdse4ug", dir:"https://www.aljazeera.com/live"},
-  {n:"DW News",     hls:"https://dwamdstream107.akamaized.net/hls/live/2017968/dwstream107/stream05/streamPlaylist.m3u8",
-                    yt:"UCknLrEdhRCp1aegoMqRaCZg", dir:"https://www.dw.com/en/live-tv/s-100825"},
-  {n:"France24",    hls:"https://uvotv-aniview.global.ssl.fastly.net/hls/live/2120684/france24english/playlist.m3u8",
-                    yt:"UCQfwfsi5VrQ8yKZ-UWmAqBA", dir:"https://www.france24.com/en/live"},
-  {n:"CGTN",        hls:"https://news.cgtn.com/resource/live/english/cgtn-news.m3u8",
-                    yt:null, dir:"https://www.cgtn.com/tv"},
-  {n:"France24 ES", hls:"https://uvotv-aniview.global.ssl.fastly.net/hls/live/2120686/france24spanish/playlist.m3u8",
-                    yt:null, dir:"https://www.france24.com/es/en-vivo"},
-  {n:"DW Español",  hls:"https://dwamdstream109.akamaized.net/hls/live/2017970/dwstream109/stream05/streamPlaylist.m3u8",
-                    yt:null, dir:"https://www.dw.com/es/en-vivo/s-100837"},
-  {n:"NHK World",   hls:"https://nhkworld.webcdn.stream.ne.jp/www11/nhkworld-tv/global/263941/live_wa_s.m3u8",
-                    yt:null, dir:"https://www3.nhk.or.jp/nhkworld/en/live/"},
-  {n:"Sky News",    hls:null,
-                    yt:"UCoMdktPbSTixAyNGwb-UYkQ", dir:"https://www.youtube.com/@SkyNews/live"},
-  {n:"Bloomberg",   hls:null,
-                    yt:"UCrM7B7SL_g1edFOnmj-SDKg", dir:"https://www.youtube.com/@BloombergTV/live"},
+  {n:"Al Jazeera",  yt:"UCNye-wNBqNL5ZzHSJdse4ug",  dir:"https://www.youtube.com/@AlJazeeraEnglish/live"},
+  {n:"France24",    yt:"UCQfwfsi5VrQ8yKZ-UWmAqBA",  dir:"https://www.youtube.com/@FRANCE24/live"},
+  {n:"DW News",     yt:"UCknLrEdhRCp1aegoMqRaCZg",  dir:"https://www.youtube.com/@dwnews/live"},
+  {n:"Euronews",    yt:"UCW5QnvGidLzwORYRpFIEWog",  dir:"https://www.youtube.com/@euronews/live"},
+  {n:"Sky News",    yt:"UCoMdktPbSTixAyNGwb-UYkQ",  dir:"https://www.youtube.com/@SkyNews/live"},
+  {n:"Bloomberg",   yt:"UCrM7B7SL_g1edFOnmj-SDKg",  dir:"https://www.youtube.com/@BloombergTV/live"},
+  {n:"CNN",         yt:"UCupvZG-5ko_eiXAupbDfxWw",  dir:"https://www.youtube.com/@CNN/live"},
+  {n:"AlArabiya",   yt:"UCnUYZLuoy1rq1aVMwx4aTzw",  dir:"https://www.youtube.com/@AlArabiya/live"},
+  {n:"WION",        yt:"UC_gUM8rL-Lrg6O3adPW9K1g",  dir:"https://www.youtube.com/@WIONews/live"},
+  {n:"TRT World",   yt:"UC7fWeaHhqgM4Lba7FEAL5Xw",  dir:"https://www.youtube.com/@taborttrtworld/live"},
+  {n:"NDTV",        yt:"UCHMm3FLjnpMBdkGMOFoeVMA",  dir:"https://www.youtube.com/@NDTV/live"},
 ];
 // Webcams: using Windy.com public webcam thumbnails (no hotlink blocking)
 // Format: https://webcams.windy.com/webcams/public/thumb/{id}/full
@@ -391,152 +383,125 @@ function setTF(btn){document.querySelectorAll(".tf").forEach(function(b){b.class
 function initMap(){leafMap=L.map("map",{center:[22,20],zoom:2,zoomControl:true,attributionControl:false,minZoom:2,maxZoom:12});L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18}).addTo(leafMap);drawMap();}
 function buildLayers(){var el=document.getElementById("layers-list");LAYERS_DEF.forEach(function(l){var row=document.createElement("div");row.className="ly-row";row.innerHTML="<div class='ly-cb"+(l.on?" on":"")+"' id='lcb-"+l.id+"'></div><span class='ly-ico'>"+l.ico+"</span><span class='ly-lbl' style='color:"+l.c+"'>"+l.nm+"</span>";row.onclick=function(){aL[l.id]=!aL[l.id];document.getElementById("lcb-"+l.id).classList.toggle("on",aL[l.id]);};el.appendChild(row);});}
 
-// === LIVE TV PLAYER (HLS primary → YouTube fallback → direct link) ===
-var hlsInstance=null;
-var curCh=0;
-var ytIframe=null; // dynamically created iframe for YT fallback
+// === LIVE TV — YouTube API parallel scan ===
+var curCh=-1;
+var ytCache={}; // yt channelId → videoId
+var firstLiveFound=false;
 
-function showLoading(){
-  document.getElementById("tv-loading").classList.add("show");
-  document.getElementById("tv-video").style.display="none";
-  document.getElementById("tv-err").classList.remove("show");
-  if(ytIframe){ytIframe.style.display="none";}
-}
-function showVideo(){
-  document.getElementById("tv-loading").classList.remove("show");
-  document.getElementById("tv-video").style.display="block";
-  document.getElementById("tv-err").classList.remove("show");
-  if(ytIframe){ytIframe.style.display="none";}
-}
-function showYTIframe(src){
-  document.getElementById("tv-loading").classList.remove("show");
-  document.getElementById("tv-video").style.display="none";
-  document.getElementById("tv-err").classList.remove("show");
-  if(!ytIframe){
-    ytIframe=document.createElement("iframe");
-    ytIframe.style.cssText="width:100%;height:100%;border:none;display:block;position:absolute;top:0;left:0;";
-    ytIframe.allow="autoplay;encrypted-media";
-    ytIframe.allowFullscreen=true;
-    document.getElementById("tv-frame").appendChild(ytIframe);
-  }
-  ytIframe.style.display="block";
-  ytIframe.src=src;
-}
-function showError(){
-  document.getElementById("tv-loading").classList.remove("show");
-  document.getElementById("tv-video").style.display="none";
-  document.getElementById("tv-err").classList.add("show");
-  if(ytIframe){ytIframe.style.display="none";}
+// Scan a single channel for live stream
+function scanChannel(idx){
+  var ch=CH[idx];
+  var url="https://www.googleapis.com/youtube/v3/search?part=snippet&channelId="+ch.yt+"&type=video&eventType=live&maxResults=1&order=date&key="+YT_KEY;
+  return fetch(url).then(function(r){return r.json();}).then(function(data){
+    if(data.items&&data.items.length>0){
+      var vid=data.items[0].id.videoId;
+      ytCache[ch.yt]=vid;
+      console.log("[SALA] ● LIVE:",ch.n,"→",vid);
+      // Mark tab as live
+      var dot=document.getElementById("td-"+idx);
+      if(dot)dot.classList.add("live");
+      // Auto-play first live channel found
+      if(!firstLiveFound){
+        firstLiveFound=true;
+        playChannel(idx);
+      }
+    }else{
+      console.log("[SALA] ○ offline:",ch.n);
+    }
+  }).catch(function(err){
+    console.log("[SALA] ✕ API error:",ch.n,err.message||err);
+  });
 }
 
-function cleanupHLS(){
-  if(hlsInstance){try{hlsInstance.destroy();}catch(e){}hlsInstance=null;}
-  var vid=document.getElementById("tv-video");
-  vid.pause();vid.removeAttribute("src");vid.load();
+// Scan all channels in parallel
+function scanAll(){
+  console.log("[SALA] Scanning",CH.length,"channels…");
+  var promises=CH.map(function(_,i){return scanChannel(i);});
+  Promise.all(promises).then(function(){
+    if(!firstLiveFound){
+      console.log("[SALA] No live channels found. Showing error.");
+      document.getElementById("tv-loading").classList.remove("show");
+      document.getElementById("tv-err").classList.add("show");
+      document.getElementById("tv-err-msg").innerHTML="Ningún canal en vivo en este momento<br>Hacé click en un canal para abrirlo directo";
+    }
+  });
 }
 
-function loadCH(chi){
-  curCh=chi;
-  var ch=CH[chi];
-  // Update UI
-  document.querySelectorAll(".tv-tab").forEach(function(t,i){t.classList.toggle("on",i===chi);});
+// Play a specific channel
+function playChannel(idx){
+  curCh=idx;
+  var ch=CH[idx];
+  var iframe=document.getElementById("tv-iframe");
+  var loading=document.getElementById("tv-loading");
+  var err=document.getElementById("tv-err");
+  // Update tabs
+  document.querySelectorAll(".tv-tab").forEach(function(t,i){t.classList.toggle("on",i===idx);});
+  // Update links
   document.getElementById("tv-link").href=ch.dir;
   document.getElementById("tv-link").textContent="↗ "+ch.n+" en vivo";
   document.getElementById("tv-err-btn").href=ch.dir;
   document.getElementById("tv-err-btn").textContent="▶ VER "+ch.n.toUpperCase();
-  // Cleanup previous
-  cleanupHLS();
-  showLoading();
-  // Strategy: try HLS first, then YouTube, then error
-  if(ch.hls){
-    tryHLS(chi,ch);
-  }else if(ch.yt){
-    tryYT(chi,ch);
+  // Check if we have a cached video ID
+  if(ytCache[ch.yt]){
+    var vid=ytCache[ch.yt];
+    loading.classList.remove("show");
+    err.classList.remove("show");
+    iframe.style.display="block";
+    iframe.src="https://www.youtube.com/embed/"+vid+"?autoplay=1&mute=1&rel=0&modestbranding=1";
+    document.getElementById("tv-link").href="https://www.youtube.com/watch?v="+vid;
+    console.log("[SALA] Playing:",ch.n,"→",vid);
   }else{
-    showError();
-  }
-}
-
-function tryHLS(chi,ch){
-  var vid=document.getElementById("tv-video");
-  var hlsOK=false;
-  if(typeof Hls!=="undefined"&&Hls.isSupported()){
-    hlsInstance=new Hls({maxBufferLength:15,maxMaxBufferLength:30,startLevel:-1,enableWorker:true});
-    hlsInstance.loadSource(ch.hls);
-    hlsInstance.attachMedia(vid);
-    hlsInstance.on(Hls.Events.MANIFEST_PARSED,function(){
-      hlsOK=true;
-      vid.play().catch(function(){});
-      showVideo();
-      console.log("[SALA] HLS OK:",ch.n);
-    });
-    hlsInstance.on(Hls.Events.ERROR,function(ev,data){
-      if(data.fatal&&!hlsOK){
-        console.log("[SALA] HLS failed:",ch.n,data.type,data.details);
-        cleanupHLS();
-        // Fallback to YouTube
-        if(ch.yt){tryYT(chi,ch);}else{showError();}
+    // Not live — try to fetch on demand
+    iframe.style.display="none";
+    loading.classList.add("show");
+    err.classList.remove("show");
+    var url="https://www.googleapis.com/youtube/v3/search?part=snippet&channelId="+ch.yt+"&type=video&eventType=live&maxResults=1&order=date&key="+YT_KEY;
+    fetch(url).then(function(r){return r.json();}).then(function(data){
+      if(curCh!==idx)return; // user switched
+      if(data.items&&data.items.length>0){
+        var vid=data.items[0].id.videoId;
+        ytCache[ch.yt]=vid;
+        var dot=document.getElementById("td-"+idx);
+        if(dot)dot.classList.add("live");
+        loading.classList.remove("show");
+        iframe.style.display="block";
+        iframe.src="https://www.youtube.com/embed/"+vid+"?autoplay=1&mute=1&rel=0&modestbranding=1";
+        document.getElementById("tv-link").href="https://www.youtube.com/watch?v="+vid;
+        console.log("[SALA] Now live:",ch.n,"→",vid);
+      }else{
+        // Not live — show error with direct link
+        loading.classList.remove("show");
+        iframe.style.display="none";
+        err.classList.add("show");
+        document.getElementById("tv-err-msg").innerHTML=ch.n+" no está en vivo ahora";
+        console.log("[SALA] Not live:",ch.n);
       }
+    }).catch(function(){
+      if(curCh!==idx)return;
+      loading.classList.remove("show");
+      iframe.style.display="none";
+      err.classList.add("show");
+      document.getElementById("tv-err-msg").innerHTML="Error al consultar YouTube API";
     });
-    // Timeout: if HLS hasn't connected in 8s, try YouTube
-    setTimeout(function(){
-      if(curCh===chi&&!hlsOK){
-        console.log("[SALA] HLS timeout:",ch.n,"→ trying YouTube");
-        cleanupHLS();
-        if(ch.yt){tryYT(chi,ch);}else{showError();}
-      }
-    },8000);
-  }else if(vid.canPlayType("application/vnd.apple.mpegurl")){
-    // Safari native HLS
-    vid.src=ch.hls;
-    vid.addEventListener("loadedmetadata",function(){showVideo();vid.play();},{once:true});
-    vid.addEventListener("error",function(){
-      if(ch.yt){tryYT(chi,ch);}else{showError();}
-    },{once:true});
-  }else{
-    // No HLS support at all, go to YouTube
-    if(ch.yt){tryYT(chi,ch);}else{showError();}
   }
-}
-
-function tryYT(chi,ch){
-  if(curCh!==chi)return; // user switched channel
-  console.log("[SALA] Trying YouTube API:",ch.n);
-  var url="https://www.googleapis.com/youtube/v3/search?part=snippet&channelId="+ch.yt+"&type=video&eventType=live&maxResults=1&key="+YT_KEY;
-  fetch(url).then(function(r){return r.json();}).then(function(data){
-    if(curCh!==chi)return;
-    if(data.items&&data.items.length>0){
-      var vid=data.items[0].id.videoId;
-      console.log("[SALA] YouTube live found:",ch.n,"→",vid);
-      showYTIframe("https://www.youtube.com/embed/"+vid+"?autoplay=1&mute=1&rel=0&modestbranding=1");
-      document.getElementById("tv-link").href="https://www.youtube.com/watch?v="+vid;
-    }else{
-      // No live stream, try upcoming
-      var url2="https://www.googleapis.com/youtube/v3/search?part=snippet&channelId="+ch.yt+"&type=video&eventType=upcoming&maxResults=1&key="+YT_KEY;
-      fetch(url2).then(function(r2){return r2.json();}).then(function(d2){
-        if(curCh!==chi)return;
-        if(d2.items&&d2.items.length>0){
-          var vid2=d2.items[0].id.videoId;
-          showYTIframe("https://www.youtube.com/embed/"+vid2+"?autoplay=1&mute=1&rel=0&modestbranding=1");
-        }else{showError();}
-      }).catch(function(){showError();});
-    }
-  }).catch(function(){
-    console.log("[SALA] YouTube API failed:",ch.n);
-    showError();
-  });
 }
 
 function initTV(){
   var tabs=document.getElementById("tv-tabs");
   CH.forEach(function(ch,i){
     var b=document.createElement("button");
-    b.className="tv-tab"+(i===0?" on":"");
-    b.textContent=ch.n;
-    b.onclick=function(){loadCH(i);};
+    b.className="tv-tab";
+    b.innerHTML="<span class='td' id='td-"+i+"'></span>"+ch.n;
+    b.onclick=function(){playChannel(i);};
     tabs.appendChild(b);
   });
-  loadCH(0);
+  // Scan all channels in parallel
+  scanAll();
+  // Re-scan every 5 minutes
+  setInterval(function(){
+    firstLiveFound=(curCh>=0);
+    CH.forEach(function(ch,i){scanChannel(i);});
+  },300000);
 }
 
 // WEBCAMS
@@ -548,7 +513,7 @@ function renderWcams(){var g=document.getElementById("wcam-grid");g.innerHTML=""
 function buildTheaters(){var el=document.getElementById("theaters");THEATERS.forEach(function(t){var d=document.createElement("div");d.className="ai-th";d.style.borderLeftColor=t.c;d.innerHTML="<div class='ai-th-t' style='color:"+t.c+"'>"+t.n+"<span class='ai-crit' style='background:"+t.c+"'>"+t.sev+"</span></div><div class='ai-row'>AIR ✈ <b>"+t.air+"</b> &nbsp; SEA ⚓ <b>"+t.sea+"</b> &nbsp; BUQUES <b>"+t.ves+"</b></div><div class='ai-row' style='color:"+t.c+"'>"+t.trend+"</div>";el.appendChild(d);});}
 function buildInstability(){var el=document.getElementById("instability");INSTABILITY.forEach(function(d){var row=document.createElement("div");row.className="ir";row.innerHTML="<span class='ir-nm'>"+d.n+"</span><div class='ir-bg'><div class='ir-fill' data-v='"+d.v+"' style='background:"+d.c+"'></div></div><span class='ir-v'>"+d.v+"</span><span class='ir-a' style='color:"+d.c+"'>"+d.a+"</span>";el.appendChild(row);});setTimeout(function(){document.querySelectorAll(".ir-fill").forEach(function(b){b.style.width=b.dataset.v+"%";});},600);}
 
-// X/Twitter — Official Timeline Widget (no API key needed)
+// X/Twitter — Official Timeline Widget
 var xC={};
 function fetchX(h,el){
   el.innerHTML="";
@@ -563,7 +528,6 @@ function fetchX(h,el){
   a.textContent="Cargando @"+h+"…";
   wrapper.appendChild(a);
   el.appendChild(wrapper);
-  // Render widget
   if(window.twttr&&window.twttr.widgets){window.twttr.widgets.load(wrapper);}
   else{setTimeout(function(){if(window.twttr&&window.twttr.widgets)window.twttr.widgets.load(wrapper);},2500);}
 }
