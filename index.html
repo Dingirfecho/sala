@@ -194,15 +194,14 @@ body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px
 .xbar-logo{font-size:16px;color:#1d9bf0;font-weight:700;}
 .xbar-title{font-family:var(--cond);font-size:12px;font-weight:700;letter-spacing:2px;color:#1d9bf0;}
 #xo-cats{display:flex;gap:4px;margin-left:16px;}
-.xcat{font-family:var(--mono);font-size:9px;padding:3px 9px;border-radius:2px;border:1px solid var(--b2);color:var(--t3);background:transparent;transition:all .12s;cursor:pointer;letter-spacing:.5px;}
+.xcat{font-family:var(--mono);font-size:9px;padding:3px 9px;border-radius:2px;border:1px solid var(--b2);color:var(--t3);background:transparent;transition:all .12s;cursor:pointer;}
 .xcat.on{background:#1d9bf0;color:#000;border-color:#1d9bf0;font-weight:700;}
 .xcat:hover{border-color:#1d9bf0;color:#1d9bf0;}
-#xo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:2px;min-height:350px;background:var(--b2);}
-.xo-cell{background:var(--bg);display:flex;flex-direction:column;overflow:hidden;}
-.xo-cell-hdr{padding:6px 10px;background:var(--s2);border-bottom:1px solid var(--b2);display:flex;align-items:center;gap:6px;}
-.xo-cell-hdr a{font-family:var(--mono);font-size:10px;font-weight:600;color:#1d9bf0;text-decoration:none;}
-.xo-cell-hdr a:hover{text-decoration:underline;}
-.xo-cell-body{flex:1;overflow:hidden;}
+#xo-sel{display:flex;flex-wrap:wrap;gap:4px;padding:8px 14px;border-bottom:1px solid var(--b2);background:var(--s1);}
+.xo-btn{font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:12px;border:1px solid rgba(29,155,240,.25);color:#1d9bf0;background:rgba(29,155,240,.05);cursor:pointer;transition:all .12s;}
+.xo-btn.on{background:#1d9bf0;color:#000;border-color:#1d9bf0;font-weight:700;}
+.xo-btn:hover{border-color:#1d9bf0;background:rgba(29,155,240,.15);}
+#xo-timeline{min-height:400px;background:var(--bg);padding:0;}
 
 /* TICKER */
 #ticker{position:sticky;bottom:0;z-index:900;height:26px;background:rgba(7,9,13,.98);border-top:1px solid var(--b2);display:flex;align-items:center;overflow:hidden;}
@@ -325,7 +324,8 @@ body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px
     <span class="live-badge">● LIVE</span>
     <div id="xo-cats"></div>
   </div>
-  <div id="xo-grid"></div>
+  <div id="xo-sel"></div>
+  <div id="xo-timeline"></div>
 </div>
 
 <!-- TICKER -->
@@ -571,49 +571,51 @@ function buildGrid(){var grid=document.getElementById("feed-grid");FC.forEach(fu
 function initTicker(){var inner=document.getElementById("tk-inner"),h=TICKERS.map(function(t){return"<span class='tk-i' onclick=\"window.open('"+t.u+"','_blank')\">"+t.t+"</span><span class='tk-s'>◆</span>";}).join("");inner.innerHTML=h+h;}
 function initClock(){(function tick(){var n=new Date();document.getElementById("clock").textContent=String(n.getUTCHours()).padStart(2,"0")+":"+String(n.getUTCMinutes()).padStart(2,"0")+":"+String(n.getUTCSeconds()).padStart(2,"0")+" UTC";if(Math.random()<.002){var e=document.getElementById("alcnt");if(e)e.textContent=+e.textContent+1;}setTimeout(tick,1000);})();}
 
-// X OSINT SECTION — Twitter timeline embeds in a 4-column grid
+// X OSINT — ONE timeline at a time (avoids Twitter 429 rate limiting)
 var XOSINT={
   "ALL":null,
-  "GENERAL":["IntelCrab","OSINTdefender","GeoConfirmed","Conflicts"],
-  "UCRANIA":["RALee85","UAWeapons","War_Mapper","KofmanMichael"],
+  "GENERAL":["IntelCrab","OSINTdefender","GeoConfirmed","Conflicts","sentdefender","BNONews"],
+  "UCRANIA":["RALee85","UAWeapons","War_Mapper","KofmanMichael","WarMonitor3"],
   "MENA":["MiddleEastEye","TankerTrackers","Charles_Lister","AuroraIntel"],
   "ASIA-PAC":["MT_Anderson","detikiw","IndoPac_Info","sentdefender"],
   "NUCLEAR":["ArmsControlWonk","nukestrat","naborman","BNONews"]
 };
 function getXAccounts(cat){
-  if(cat==="ALL")return XOSINT["GENERAL"];
+  if(cat==="ALL"){var all=[];Object.keys(XOSINT).forEach(function(k){if(k!=="ALL"&&XOSINT[k])all=all.concat(XOSINT[k]);});var u=[];all.forEach(function(a){if(u.indexOf(a)<0)u.push(a);});return u;}
   return XOSINT[cat]||[];
 }
-function renderXGrid(cat){
-  var grid=document.getElementById("xo-grid");
-  grid.innerHTML="";
+function renderXAccounts(cat){
+  var sel=document.getElementById("xo-sel");
+  sel.innerHTML="";
   var accounts=getXAccounts(cat);
-  accounts.forEach(function(h){
-    var cell=document.createElement("div");
-    cell.className="xo-cell";
-    var hdr=document.createElement("div");
-    hdr.className="xo-cell-hdr";
-    hdr.innerHTML="<span style='color:#1d9bf0;font-size:11px;'>𝕏</span><a href='https://x.com/"+h+"' target='_blank' rel='noopener'>@"+h+"</a>";
-    cell.appendChild(hdr);
-    var body=document.createElement("div");
-    body.className="xo-cell-body";
-    var tl=document.createElement("a");
-    tl.className="twitter-timeline";
-    tl.setAttribute("data-theme","dark");
-    tl.setAttribute("data-chrome","noheader nofooter noborders transparent");
-    tl.setAttribute("data-tweet-limit","3");
-    tl.setAttribute("data-height","320");
-    tl.setAttribute("data-dnt","true");
-    tl.href="https://twitter.com/"+h;
-    tl.textContent="Cargando @"+h+"…";
-    tl.style.cssText="font-family:var(--mono);font-size:9px;color:var(--t3);";
-    body.appendChild(tl);
-    cell.appendChild(body);
-    grid.appendChild(cell);
+  accounts.forEach(function(h,i){
+    var b=document.createElement("button");
+    b.className="xo-btn"+(i===0?" on":"");
+    b.textContent="@"+h;
+    b.onclick=function(){
+      sel.querySelectorAll(".xo-btn").forEach(function(x){x.classList.remove("on");});
+      b.classList.add("on");
+      loadXTimeline(h);
+    };
+    sel.appendChild(b);
   });
-  setTimeout(function(){
-    if(window.twttr&&window.twttr.widgets){window.twttr.widgets.load(grid);}
-  },300);
+  if(accounts.length)loadXTimeline(accounts[0]);
+}
+function loadXTimeline(h){
+  var target=document.getElementById("xo-timeline");
+  target.innerHTML="";
+  var tl=document.createElement("a");
+  tl.className="twitter-timeline";
+  tl.setAttribute("data-theme","dark");
+  tl.setAttribute("data-chrome","noheader nofooter noborders transparent");
+  tl.setAttribute("data-tweet-limit","5");
+  tl.setAttribute("data-dnt","true");
+  tl.href="https://twitter.com/"+h;
+  tl.textContent="Cargando posts de @"+h+"…";
+  tl.style.cssText="font-family:var(--mono);font-size:10px;color:var(--t3);display:block;padding:20px;";
+  target.appendChild(tl);
+  if(window.twttr&&window.twttr.widgets){window.twttr.widgets.load(target);}
+  else{setTimeout(function(){if(window.twttr&&window.twttr.widgets)window.twttr.widgets.load(target);},1500);}
 }
 function buildXBar(){
   var cats=document.getElementById("xo-cats");
@@ -624,11 +626,11 @@ function buildXBar(){
     b.onclick=function(){
       cats.querySelectorAll(".xcat").forEach(function(c){c.classList.remove("on");});
       b.classList.add("on");
-      renderXGrid(cat);
+      renderXAccounts(cat);
     };
     cats.appendChild(b);
   });
-  renderXGrid("ALL");
+  renderXAccounts("ALL");
 }
 
 // BOOT
