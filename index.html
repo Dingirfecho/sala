@@ -398,14 +398,113 @@ var FC=[{id:"world",title:"WORLD NEWS",c:"#e5334a",xl:["IntelCrab","OSINTdefende
 var TICKERS=[{t:"Irán lanza oleada de misiles balísticos sobre Israel — alerta en toda la región MENA",u:"https://www.middleeasteye.net"},{t:"Rusia lanza 83 drones Shahed en ataque nocturno sobre infraestructura energética ucraniana",u:"https://liveuamap.com"},{t:"China realiza ejercicios navales de 72h en estrecho de Taiwán sin aviso previo",u:"https://www.flightradar24.com"},{t:"Houthi reivindica ataque con misil YJ-12 a portacontenedores en Bab el-Mandeb",u:"https://www.marinetraffic.com"},{t:"AIEA: reservas iraníes de uranio al 83.7% — ONU convoca sesión de emergencia",u:"https://www.iaea.org"},{t:"CISA: APT28 activo en redes de infraestructura crítica de 6 países occidentales",u:"https://www.cisa.gov"},{t:"Brent supera $94/barril tras cierre parcial del estrecho de Ormuz",u:"https://www.reuters.com"},{t:"DPRK lanza tercer ICBM Hwasong-18 del año — trayectoria al Pacífico norte",u:"https://www.38north.org"}];
 
 // MAP
-var leafMap,mk={},aL={};LAYERS_DEF.forEach(function(l){aL[l.id]=l.on;});
+var leafMap,mk={},imk=[],circles=[],aL={};LAYERS_DEF.forEach(function(l){aL[l.id]=l.on;});
+
+// Infrastructure data — real coordinates
+var INFRA=[
+  // SPACEPORTS (layer: space)
+  {ly:"space",nm:"Cape Canaveral",lat:28.4,lng:-80.6,desc:"Kennedy Space Center / SpaceX LC-39A. Principal launch site USA."},
+  {ly:"space",nm:"Vandenberg SFB",lat:34.7,lng:-120.6,desc:"Base de lanzamiento polar, SpaceX SLC-4E, ICBM testing."},
+  {ly:"space",nm:"Baikonur",lat:45.6,lng:63.3,desc:"Cosmódromo principal de Rusia/Kazajistán. Soyuz, Proton."},
+  {ly:"space",nm:"Plesetsk",lat:62.9,lng:40.7,desc:"Base militar rusa. Lanzamientos ICBM y satélites militares."},
+  {ly:"space",nm:"Vostochny",lat:51.9,lng:128.3,desc:"Nuevo cosmódromo ruso en el Lejano Oriente. Angara."},
+  {ly:"space",nm:"Jiuquan",lat:40.9,lng:100.3,desc:"Centro de lanzamiento más antiguo de China. Shenzhou."},
+  {ly:"space",nm:"Xichang",lat:28.2,lng:102.0,desc:"Centro de lanzamiento chino. Long March, BeiDou."},
+  {ly:"space",nm:"Wenchang",lat:19.6,lng:110.9,desc:"Centro costero chino. Long March 5, estación Tiangong."},
+  {ly:"space",nm:"Satish Dhawan",lat:13.7,lng:80.2,desc:"Centro ISRO, India. PSLV, GSLV, Chandrayaan."},
+  {ly:"space",nm:"Tanegashima",lat:30.4,lng:131.0,desc:"Centro JAXA, Japón. H-IIA, H3."},
+  {ly:"space",nm:"Kourou",lat:5.2,lng:-52.8,desc:"Centro Espacial Guayanés (ESA). Ariane 6, Vega."},
+  {ly:"space",nm:"Semnan",lat:35.2,lng:53.9,desc:"Centro de lanzamiento iraní. Safir, Simorgh."},
+  {ly:"space",nm:"Sohae",lat:39.7,lng:124.7,desc:"Estación de lanzamiento norcoreana. Unha."},
+  {ly:"space",nm:"Palmachim",lat:31.9,lng:34.7,desc:"Base israelí. Shavit, pruebas Arrow/Iron Dome."},
+  // NUCLEAR SITES (layer: nuc)
+  {ly:"nuc",nm:"Natanz",lat:33.7,lng:51.7,desc:"Planta de enriquecimiento de uranio iraní. Centrifugadoras IR-6/IR-9."},
+  {ly:"nuc",nm:"Fordow",lat:34.9,lng:51.6,desc:"Planta subterránea de enriquecimiento iraní. Bunker bajo montaña."},
+  {ly:"nuc",nm:"Isfahan UCF",lat:32.7,lng:51.7,desc:"Conversión de uranio iraní. Paso previo a enriquecimiento."},
+  {ly:"nuc",nm:"Bushehr NPP",lat:28.8,lng:50.9,desc:"Central nuclear iraní (Rosatom). 1000 MW operativa."},
+  {ly:"nuc",nm:"Dimona",lat:31.0,lng:35.1,desc:"Centro nuclear israelí. Estimado 80-400 ojivas no declaradas."},
+  {ly:"nuc",nm:"Yongbyon",lat:40.1,lng:125.8,desc:"Complejo nuclear norcoreano. Reactor de plutonio 5MWe."},
+  {ly:"nuc",nm:"Punggye-ri",lat:41.3,lng:129.1,desc:"Sitio de pruebas nucleares DPRK. 6 detonaciones (2006-2017)."},
+  {ly:"nuc",nm:"Zaporizhzhia NPP",lat:47.5,lng:34.6,desc:"Mayor central nuclear de Europa. Zona de combate activa."},
+  {ly:"nuc",nm:"Kahuta",lat:33.6,lng:73.4,desc:"Planta de enriquecimiento pakistaní. Programa Khan."},
+  {ly:"nuc",nm:"Lop Nur",lat:41.6,lng:88.3,desc:"Sitio de pruebas nucleares chino. 45 detonaciones."},
+  {ly:"nuc",nm:"Los Alamos",lat:35.9,lng:-106.3,desc:"Laboratorio de armas nucleares USA. W87, W88."},
+  {ly:"nuc",nm:"Sarov",lat:54.9,lng:43.3,desc:"Centro de diseño nuclear ruso (ex Arzamas-16). RS-28 Sarmat."},
+  {ly:"nuc",nm:"Sellafield",lat:54.4,lng:-3.5,desc:"Reprocesamiento nuclear UK. Trident warheads."},
+  {ly:"nuc",nm:"La Hague",lat:49.7,lng:-1.9,desc:"Planta de reprocesamiento francesa. Force de frappe."},
+  // MILITARY BASES (layer: bases)
+  {ly:"bases",nm:"Ramstein AFB",lat:49.4,lng:7.6,desc:"HQ USAFE-AFAFRICA. Centro logístico OTAN Europa."},
+  {ly:"bases",nm:"Incirlik AFB",lat:37.0,lng:35.4,desc:"Base USA en Turquía. ~50 bombas nucleares B61."},
+  {ly:"bases",nm:"Diego Garcia",lat:-7.3,lng:72.4,desc:"Base conjunta USA/UK en Índico. B-2, submarinos."},
+  {ly:"bases",nm:"Al Udeid",lat:25.1,lng:51.3,desc:"Mayor base USA en Medio Oriente (Qatar). CENTCOM forward."},
+  {ly:"bases",nm:"Camp Lemonnier",lat:11.5,lng:43.1,desc:"Base USA en Djibouti. Operaciones contraterrorismo África."},
+  {ly:"bases",nm:"Yokosuka",lat:35.3,lng:139.7,desc:"Base naval USA en Japón. USS Ronald Reagan, 7th Fleet."},
+  {ly:"bases",nm:"Guam / Andersen",lat:13.6,lng:144.9,desc:"Base aérea USA en Pacífico. B-52, B-1B, THAAD."},
+  {ly:"bases",nm:"Tartus",lat:34.9,lng:35.9,desc:"Base naval rusa en Siria. Única base rusa en Mediterráneo."},
+  {ly:"bases",nm:"Sevastopol",lat:44.6,lng:33.5,desc:"Base Flota del Mar Negro rusa (Crimea ocupada)."},
+  {ly:"bases",nm:"Hainan / Yulin",lat:18.2,lng:109.6,desc:"Base naval y submarina china. Tipo 094 SSBN."},
+  {ly:"bases",nm:"Kaliningrad",lat:54.7,lng:20.5,desc:"Enclave ruso en Báltico. Iskander-M, S-400."},
+  {ly:"bases",nm:"Thule AFB",lat:76.5,lng:-68.7,desc:"Base USSF en Groenlandia. Alerta temprana ICBM."},
+  {ly:"bases",nm:"Pine Gap",lat:-23.8,lng:133.7,desc:"Base SIGINT Australia/USA. Vigilancia por satélite."},
+  {ly:"bases",nm:"Djibouti (China)",lat:11.6,lng:43.0,desc:"Primera base militar china en el extranjero. PLA."},
+  // GAMMA / RADIOLOGICAL SITES (layer: gamma)
+  {ly:"gamma",nm:"Chernobyl",lat:51.4,lng:30.1,desc:"Desastre 1986. Zona de exclusión 30km. Ocupada brevemente por Rusia 2022."},
+  {ly:"gamma",nm:"Fukushima Daiichi",lat:37.4,lng:141.0,desc:"Desastre 2011. Vertido de agua tratada al Pacífico en curso."},
+  {ly:"gamma",nm:"Zaporizhzhia NPP",lat:47.5,lng:34.6,desc:"Zona de combate activa. IAEA monitorea integridad."},
+  {ly:"gamma",nm:"Mayak / Chelyabinsk",lat:55.7,lng:60.8,desc:"Desastre Kyshtym 1957. Reprocesamiento nuclear ruso activo."},
+  {ly:"gamma",nm:"Goiânia",lat:-16.7,lng:-49.3,desc:"Incidente Cesio-137 1987. Mayor accidente radiológico urbano."},
+  {ly:"gamma",nm:"Semipalatinsk",lat:50.4,lng:78.4,desc:"Ex sitio de pruebas soviético. 456 detonaciones. Contaminación residual."},
+  {ly:"gamma",nm:"Hanford",lat:46.6,lng:-119.5,desc:"Complejo nuclear USA. Mayor cleanup radiactivo del mundo."},
+  {ly:"gamma",nm:"Sellafield",lat:54.4,lng:-3.5,desc:"Planta UK. Vertidos históricos al Mar de Irlanda."},
+  // UNDERSEA CABLES landing points (layer: cables)
+  {ly:"cables",nm:"Cornwall UK",lat:50.1,lng:-5.5,desc:"Hub transatlántico. TAT-14, Apollo, cables a USA."},
+  {ly:"cables",nm:"Long Island NY",lat:40.8,lng:-73.0,desc:"Landing principal USA. Cables transatlánticos y caribeños."},
+  {ly:"cables",nm:"Marsella",lat:43.3,lng:5.4,desc:"Hub principal Mediterráneo. SEA-ME-WE 3/4/5, cables a África."},
+  {ly:"cables",nm:"Suez / Port Said",lat:31.0,lng:32.3,desc:"Chokepoint crítico. 17 cables submarinos cruzan el canal."},
+  {ly:"cables",nm:"Djibouti",lat:11.6,lng:43.1,desc:"Hub de cables Mar Rojo. Conecta Europa-Asia. Vulnerable a Houthi."},
+  {ly:"cables",nm:"Mumbai",lat:19.1,lng:72.9,desc:"Hub principal India. i2i, TGN-Eurasia, cables a ME y SEA."},
+  {ly:"cables",nm:"Singapur",lat:1.3,lng:103.8,desc:"Hub Asia-Pacífico. SEA-ME-WE, APG, SJC. ~30 cables."},
+  {ly:"cables",nm:"Hong Kong",lat:22.3,lng:114.2,desc:"Hub Asia. AAG, APG, APCN-2. Enlace China-mundo."},
+  {ly:"cables",nm:"Fortaleza",lat:-3.7,lng:-38.5,desc:"Hub LATAM. SACS, EllaLink. Conexión directa Europa-Brasil."},
+  {ly:"cables",nm:"Sydney",lat:-33.9,lng:151.2,desc:"Hub Oceanía. Southern Cross, Australia-Japan Cable."},
+  {ly:"cables",nm:"Svalbard",lat:78.2,lng:15.6,desc:"Cable SvalbardSat. Enlace ártico a estaciones satelitales."},
+  {ly:"cables",nm:"Vladivostok",lat:43.1,lng:131.9,desc:"Landing ruso Pacífico. RSCN, TEA. Conectividad limitada."},
+];
+
 function icon(tag,int){var tc=TC[tag]||TC.tension,sz=Math.max(10,Math.min(20,Math.round(10+(int-40)/60*10))),h=sz/2,sq=(tag==="naval"||tag==="cyber");return L.divIcon({html:"<div style='position:relative;width:"+sz+"px;height:"+sz+"px'><div style='position:absolute;top:-"+h+"px;left:-"+h+"px;width:"+(sz*2)+"px;height:"+(sz*2)+"px;border:1px solid "+tc.f+";opacity:.22;animation:ring 3s ease-out infinite;"+(sq?"border-radius:2px":"border-radius:50%")+"'></div><div style='width:"+sz+"px;height:"+sz+"px;background:"+tc.f+";box-shadow:0 0 "+(sz+2)+"px "+tc.g+";animation:mpulse 3s ease-in-out infinite;"+(sq?"border-radius:2px;transform:rotate(45deg)":"border-radius:50%")+"'></div></div>",iconSize:[sz,sz],iconAnchor:[h,h],className:""});}
+function infraIcon(ly){
+  var cfg={space:{c:"#7c55d4",ico:"🚀",sz:10},nuc:{c:"#ff9100",ico:"☢",sz:9},bases:{c:"#5a7a9a",ico:"🏛",sz:8},gamma:{c:"#d4b830",ico:"⚠",sz:8},cables:{c:"#00d4ff",ico:"●",sz:6}};
+  var o=cfg[ly]||{c:"#888",ico:"•",sz:7};
+  return L.divIcon({html:"<div style='width:"+o.sz+"px;height:"+o.sz+"px;background:"+o.c+";border-radius:"+(ly==="cables"?"1px":"50%")+";box-shadow:0 0 6px "+o.c+"80;opacity:.85;'></div>",iconSize:[o.sz,o.sz],iconAnchor:[o.sz/2,o.sz/2],className:""});
+}
 function popup(c){var tc=TC[c.tag]||TC.tension,ls=c.lnk.map(function(x){return"<a class='pu-chip' href='"+x.u+"' target='_blank' rel='noopener' style='color:"+x.c+";border-color:"+x.c+"40;background:"+x.c+"10'>"+x.l+"</a>";}).join(""),xs=c.xl.map(function(h){return"<a class='pu-xl' href='https://x.com/"+h+"' target='_blank' rel='noopener'>@"+h+"</a>";}).join("");return"<div class='pu-t' style='color:"+tc.f+"'>"+c.nm+"</div><span class='pu-b' style='color:"+tc.f+";border:1px solid "+tc.f+"50;background:"+tc.bg+"'>"+c.tag.toUpperCase()+" &nbsp;"+c.int+"/100</span><div class='pu-d'>"+c.desc+"</div><div class='pu-lbl'>FUENTES</div><div class='pu-chips'>"+ls+"</div><div class='pu-lbl' style='color:#1d9bf0;margin-top:4px'>𝕏 OSINT</div><div class='pu-chips'>"+xs+"</div>";}
-function drawMap(){for(var k in mk)leafMap.removeLayer(mk[k]);mk={};CONFLICTS.forEach(function(c){var tc=TC[c.tag]||TC.tension,m=L.marker([c.lat,c.lng],{icon:icon(c.tag,c.int)}).addTo(leafMap);L.circle([c.lat,c.lng],{radius:65000+c.int*5000,color:tc.f,fillColor:tc.f,fillOpacity:.04,opacity:.13,weight:1}).addTo(leafMap);m.bindPopup(popup(c),{maxWidth:285});mk[c.id]=m;});}
+function drawMap(){
+  // Clear all markers and circles
+  for(var k in mk)leafMap.removeLayer(mk[k]);mk={};
+  imk.forEach(function(m){leafMap.removeLayer(m);});imk=[];
+  circles.forEach(function(c){leafMap.removeLayer(c);});circles=[];
+  // Draw conflict markers
+  CONFLICTS.forEach(function(c){
+    var tc=TC[c.tag]||TC.tension;
+    var m=L.marker([c.lat,c.lng],{icon:icon(c.tag,c.int)}).addTo(leafMap);
+    var ci=L.circle([c.lat,c.lng],{radius:65000+c.int*5000,color:tc.f,fillColor:tc.f,fillOpacity:.04,opacity:.13,weight:1}).addTo(leafMap);
+    circles.push(ci);
+    m.bindPopup(popup(c),{maxWidth:285});mk[c.id]=m;
+  });
+  // Draw infrastructure markers based on active layers
+  INFRA.forEach(function(p){
+    if(!aL[p.ly])return;
+    var m=L.marker([p.lat,p.lng],{icon:infraIcon(p.ly)}).addTo(leafMap);
+    var cfg={space:{c:"#7c55d4",t:"SPACEPORT"},nuc:{c:"#ff9100",t:"NUCLEAR"},bases:{c:"#5a7a9a",t:"MILITARY BASE"},gamma:{c:"#d4b830",t:"RADIOLOGICAL"},cables:{c:"#00d4ff",t:"UNDERSEA CABLE"}};
+    var o=cfg[p.ly]||{c:"#888",t:"INFRA"};
+    m.bindPopup("<div class='pu-t' style='color:"+o.c+"'>"+p.nm+"</div><span class='pu-b' style='color:"+o.c+";border:1px solid "+o.c+"50;background:"+o.c+"10'>"+o.t+"</span><div class='pu-d'>"+p.desc+"</div>",{maxWidth:260});
+    imk.push(m);
+  });
+}
 function flyTo(ll,z){leafMap.flyTo(ll,z,{duration:1.2});}
 function setTF(btn){document.querySelectorAll(".tf").forEach(function(b){b.classList.remove("on");});btn.classList.add("on");}
 function initMap(){leafMap=L.map("map",{center:[22,20],zoom:2,zoomControl:true,attributionControl:false,minZoom:2,maxZoom:12});L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18}).addTo(leafMap);drawMap();}
-function buildLayers(){var el=document.getElementById("layers-list");LAYERS_DEF.forEach(function(l){var row=document.createElement("div");row.className="ly-row";row.innerHTML="<div class='ly-cb"+(l.on?" on":"")+"' id='lcb-"+l.id+"'></div><span class='ly-ico'>"+l.ico+"</span><span class='ly-lbl' style='color:"+l.c+"'>"+l.nm+"</span>";row.onclick=function(){aL[l.id]=!aL[l.id];document.getElementById("lcb-"+l.id).classList.toggle("on",aL[l.id]);};el.appendChild(row);});}
+function buildLayers(){var el=document.getElementById("layers-list");LAYERS_DEF.forEach(function(l){var row=document.createElement("div");row.className="ly-row";row.innerHTML="<div class='ly-cb"+(l.on?" on":"")+"' id='lcb-"+l.id+"'></div><span class='ly-ico'>"+l.ico+"</span><span class='ly-lbl' style='color:"+l.c+"'>"+l.nm+"</span>";row.onclick=function(){aL[l.id]=!aL[l.id];document.getElementById("lcb-"+l.id).classList.toggle("on",aL[l.id]);drawMap();};el.appendChild(row);});}
 
 // === LIVE TV — YouTube API parallel scan ===
 var curCh=-1;
