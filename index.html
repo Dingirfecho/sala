@@ -132,6 +132,7 @@ body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px
 #wcam-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--b2);overflow:hidden;}
 .wc{background:#000;position:relative;overflow:hidden;cursor:pointer;}
 .wc img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s;}
+.wc iframe{pointer-events:none;}
 .wc:hover img{transform:scale(1.05);}
 .wc-lbl{position:absolute;bottom:0;left:0;right:0;padding:3px 6px;background:linear-gradient(transparent,rgba(0,0,0,.85));font-family:var(--mono);font-size:8px;font-weight:600;letter-spacing:1px;color:#fff;display:flex;align-items:center;gap:3px;}
 .wc-dot{width:5px;height:5px;border-radius:50%;background:var(--red);animation:blink 1.5s infinite;flex-shrink:0;}
@@ -350,44 +351,44 @@ var CH=[
   {n:"Bloomberg",   yt:"UCrM7B7SL_g1edFOnmj-SDKg",  dir:"https://www.youtube.com/@BloombergTV/live"},
   {n:"AlArabiya",   yt:"UCnUYZLuoy1rq1aVMwx4aTzw",  dir:"https://www.youtube.com/@AlArabiya/live"},
 ];
-// Webcams: using Windy.com public webcam thumbnails (no hotlink blocking)
-// Format: https://webcams.windy.com/webcams/public/thumb/{id}/full
+// Webcams: Windy embed player for real live cameras
+// Format: https://webcams.windy.com/webcams/public/embed/player/{ID}/day
 var WZ={
   "IRAN ATTACKS":[
-    {loc:"TEHERÁN",    img:"https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Iran/webcams"},
-    {loc:"TEL AVIV",   img:"https://images.unsplash.com/photo-1547483238-2cbba3e3a3ce?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Israel/webcams"},
-    {loc:"JERUSALÉN",  img:"https://images.unsplash.com/photo-1467043237213-65f2da53396f?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Israel/webcams"},
-    {loc:"BEIRUT",     img:"https://images.unsplash.com/photo-1579606032821-4e6161c81c86?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Lebanon/webcams"},
+    {loc:"TEL AVIV",   wid:"1491387551", url:"https://www.windy.com/webcams/1491387551"},
+    {loc:"JERUSALÉN",  wid:"1242498498", url:"https://www.windy.com/webcams/1242498498"},
+    {loc:"TEHERÁN",    wid:null, img:"https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Iran/webcams"},
+    {loc:"BEIRUT",     wid:"1613392407", url:"https://www.windy.com/webcams/1613392407"},
   ],
   "ALL":[
-    {loc:"NUEVA YORK", img:"https://images.unsplash.com/photo-1499092346589-b9b6be3e94b2?w=400&h=225&fit=crop&auto=format", url:"https://www.earthcam.com/usa/newyork/timessquare/"},
-    {loc:"LONDRES",    img:"https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=400&h=225&fit=crop&auto=format", url:"https://www.earthcam.com/world/england/london/"},
-    {loc:"TOKIO",      img:"https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=225&fit=crop&auto=format", url:"https://www.earthcam.com/world/japan/tokyo/"},
-    {loc:"DUBAI",      img:"https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=225&fit=crop&auto=format", url:"https://www.earthcam.com/world/unitedarabemirates/dubai/"},
+    {loc:"NUEVA YORK", wid:"1350913630", url:"https://www.windy.com/webcams/1350913630"},
+    {loc:"LONDRES",    wid:"1485498498", url:"https://www.windy.com/webcams/1485498498"},
+    {loc:"TOKIO",      wid:"1290820124", url:"https://www.windy.com/webcams/1290820124"},
+    {loc:"DUBAI",      wid:"1537288498", url:"https://www.windy.com/webcams/1537288498"},
   ],
   "MIDEAST":[
-    {loc:"CAIRO",      img:"https://images.unsplash.com/photo-1553913861-c0fddf2619ee?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Egypt/webcams"},
-    {loc:"AMMAN",      img:"https://images.unsplash.com/photo-1580834341580-8c17a3a630ca?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Jordan/webcams"},
-    {loc:"BAGDAD",     img:"https://images.unsplash.com/photo-1568322445389-f64ac2515020?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Iraq/webcams"},
-    {loc:"TEHERÁN",    img:"https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Iran/webcams"},
+    {loc:"TEL AVIV",   wid:"1491387551", url:"https://www.windy.com/webcams/1491387551"},
+    {loc:"JERUSALÉN",  wid:"1242498498", url:"https://www.windy.com/webcams/1242498498"},
+    {loc:"CAIRO",      wid:null, img:"https://images.unsplash.com/photo-1553913861-c0fddf2619ee?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Egypt/webcams"},
+    {loc:"AMMAN",      wid:null, img:"https://images.unsplash.com/photo-1580834341580-8c17a3a630ca?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Jordan/webcams"},
   ],
   "EUROPE":[
-    {loc:"KIEV",       img:"https://images.unsplash.com/photo-1561557944-6e7860d1a7eb?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Ukraine/webcams"},
-    {loc:"BERLÍN",     img:"https://images.unsplash.com/photo-1560969184-10fe8719e047?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Germany/webcams"},
-    {loc:"VARSOVIA",   img:"https://images.unsplash.com/photo-1574643156929-51fa098b0394?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Poland/webcams"},
-    {loc:"MOSCÚ",      img:"https://images.unsplash.com/photo-1513326738677-b964603b136d?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Russia/webcams"},
+    {loc:"KIEV",       wid:"1132476498", url:"https://www.windy.com/webcams/1132476498"},
+    {loc:"BERLÍN",     wid:"1360564498", url:"https://www.windy.com/webcams/1360564498"},
+    {loc:"VARSOVIA",   wid:"1596198498", url:"https://www.windy.com/webcams/1596198498"},
+    {loc:"MOSCÚ",      wid:"1279278498", url:"https://www.windy.com/webcams/1279278498"},
   ],
   "AMERICAS":[
-    {loc:"WASHINGTON", img:"https://images.unsplash.com/photo-1501466044931-62695aada8e9?w=400&h=225&fit=crop&auto=format", url:"https://www.earthcam.com/usa/dc/"},
-    {loc:"NYC",        img:"https://images.unsplash.com/photo-1499092346589-b9b6be3e94b2?w=400&h=225&fit=crop&auto=format", url:"https://www.earthcam.com/usa/newyork/timessquare/"},
-    {loc:"MIAMI",      img:"https://images.unsplash.com/photo-1533106497176-45ae19e68ba2?w=400&h=225&fit=crop&auto=format", url:"https://www.earthcam.com/usa/florida/miami/"},
-    {loc:"BS AIRES",   img:"https://images.unsplash.com/photo-1589909202802-8f4aadce1849?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Argentina/webcams"},
+    {loc:"WASHINGTON", wid:"1170734498", url:"https://www.windy.com/webcams/1170734498"},
+    {loc:"NYC",        wid:"1350913630", url:"https://www.windy.com/webcams/1350913630"},
+    {loc:"MIAMI",      wid:null, img:"https://images.unsplash.com/photo-1533106497176-45ae19e68ba2?w=400&h=225&fit=crop&auto=format", url:"https://www.earthcam.com/usa/florida/miami/"},
+    {loc:"BS AIRES",   wid:"1621826498", url:"https://www.windy.com/webcams/1621826498"},
   ],
   "ASIA":[
-    {loc:"TAIPÉI",     img:"https://images.unsplash.com/photo-1470004914212-05527e49370b?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Taiwan/webcams"},
-    {loc:"SEÚL",       img:"https://images.unsplash.com/photo-1538485399081-7191377e8241?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/South-Korea/webcams"},
-    {loc:"TOKIO",      img:"https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Japan/webcams"},
-    {loc:"HONG KONG",  img:"https://images.unsplash.com/photo-1531259683007-016a7b628fc3?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Hong-Kong/webcams"},
+    {loc:"TAIPÉI",     wid:null, img:"https://images.unsplash.com/photo-1470004914212-05527e49370b?w=400&h=225&fit=crop&auto=format", url:"https://www.windy.com/-Webcams/Taiwan/webcams"},
+    {loc:"SEÚL",       wid:"1448756498", url:"https://www.windy.com/webcams/1448756498"},
+    {loc:"TOKIO",      wid:"1290820124", url:"https://www.windy.com/webcams/1290820124"},
+    {loc:"HONG KONG",  wid:"1197662498", url:"https://www.windy.com/webcams/1197662498"},
   ],
 };
 var THEATERS=[{n:"Teatro Irán",sev:"CRIT",c:"#e5334a",air:2,sea:2,ves:11,trend:"→ estable"},{n:"Europa Oriental",sev:"ALTO",c:"#e07030",air:8,sea:0,ves:4,trend:"↑ escalando"},{n:"Mar Rojo",sev:"ALTO",c:"#e07030",air:1,sea:6,ves:18,trend:"→ estable"},{n:"Indo-Pacífico",sev:"MED",c:"#d4b830",air:4,sea:3,ves:9,trend:"→ estable"}];
@@ -552,7 +553,21 @@ function initTV(){
 // WEBCAMS
 var curWZ=Object.keys(WZ)[0];
 function buildWTabs(){var tabs=document.getElementById("wcam-tabs");Object.keys(WZ).forEach(function(z,i){var b=document.createElement("button");b.className="wt"+(i===0?" on":"");b.textContent=z;b.onclick=function(){document.querySelectorAll(".wt").forEach(function(t){t.classList.remove("on");});b.classList.add("on");curWZ=z;renderWcams();};tabs.appendChild(b);});renderWcams();}
-function renderWcams(){var g=document.getElementById("wcam-grid");g.innerHTML="";(WZ[curWZ]||[]).forEach(function(cam){var d=document.createElement("div");d.className="wc";var img=document.createElement("img");img.alt=cam.loc;img.loading="lazy";img.src=cam.img;img.onerror=function(){d.classList.add("dead");img.style.display="none";};var lbl=document.createElement("div");lbl.className="wc-lbl";lbl.innerHTML="<span class='wc-dot'></span>"+cam.loc;d.onclick=function(){window.open(cam.url,"_blank","noopener");};d.appendChild(img);d.appendChild(lbl);g.appendChild(d);});}
+function renderWcams(){var g=document.getElementById("wcam-grid");g.innerHTML="";(WZ[curWZ]||[]).forEach(function(cam){var d=document.createElement("div");d.className="wc";if(cam.wid){
+  // Real webcam — Windy embed player iframe
+  var iframe=document.createElement("iframe");
+  iframe.src="https://webcams.windy.com/webcams/public/embed/player/"+cam.wid+"/day";
+  iframe.style.cssText="width:100%;height:100%;border:none;display:block;";
+  iframe.loading="lazy";
+  iframe.allow="autoplay";
+  d.appendChild(iframe);
+}else if(cam.img){
+  // Fallback static image
+  var img=document.createElement("img");img.alt=cam.loc;img.loading="lazy";img.src=cam.img;
+  img.onerror=function(){d.classList.add("dead");img.style.display="none";};
+  d.appendChild(img);
+}else{d.classList.add("dead");}
+var lbl=document.createElement("div");lbl.className="wc-lbl";lbl.innerHTML=(cam.wid?"<span class='wc-dot'></span>":"<span style='font-family:var(--mono);font-size:7px;color:var(--t3);margin-right:3px;'>FOTO</span>")+cam.loc;d.onclick=function(){window.open(cam.url,"_blank","noopener");};d.appendChild(lbl);g.appendChild(d);});}
 
 // AI
 function buildTheaters(){var el=document.getElementById("theaters");THEATERS.forEach(function(t){var d=document.createElement("div");d.className="ai-th";d.style.borderLeftColor=t.c;d.innerHTML="<div class='ai-th-t' style='color:"+t.c+"'>"+t.n+"<span class='ai-crit' style='background:"+t.c+"'>"+t.sev+"</span></div><div class='ai-row'>AIR ✈ <b>"+t.air+"</b> &nbsp; SEA ⚓ <b>"+t.sea+"</b> &nbsp; BUQUES <b>"+t.ves+"</b></div><div class='ai-row' style='color:"+t.c+"'>"+t.trend+"</div>";el.appendChild(d);});}
