@@ -99,29 +99,32 @@ body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px
 .leg-i{display:flex;align-items:center;gap:3px;}
 .leg-d{width:7px;height:7px;border-radius:50%;}
 
-/* PANELS */
-#panels{position:sticky;top:calc(50vh + 20px);z-index:700;height:calc(50vh - 20px);min-height:220px;display:flex;border-bottom:2px solid var(--b3);background:var(--bg);}
+/* PANELS — NOT sticky, scroll naturally below the map */
+#panels{height:calc(50vh - 20px);min-height:220px;display:flex;border-bottom:2px solid var(--b3);background:var(--bg);}
 .ph{flex-shrink:0;height:32px;padding:0 10px;background:var(--s2);border-bottom:1px solid var(--b2);display:flex;align-items:center;gap:8px;}
 .ph-t{font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;}
 .live-badge{font-family:var(--mono);font-size:7px;font-weight:600;background:var(--red);color:#fff;padding:1px 5px;border-radius:2px;animation:blink 1.8s infinite;}
 
 /* TV */
 #tv-panel{width:310px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--b2);background:var(--s1);}
-#tv-tabs{flex-shrink:0;display:flex;flex-wrap:wrap;gap:3px;padding:5px 7px;border-bottom:1px solid var(--b2);background:var(--s2);}
-.tv-tab{font-family:var(--cond);font-size:10px;font-weight:700;letter-spacing:.5px;padding:2px 8px;border-radius:2px;border:1px solid var(--b2);color:var(--t3);background:transparent;transition:all .15s;text-transform:uppercase;}
-.tv-tab.on{background:var(--red);color:#fff;border-color:var(--red);}
 #tv-frame{flex:1;position:relative;background:#000;overflow:hidden;}
-#tv-iframe{width:100%;height:100%;border:none;display:block;}
-.tv-ov{position:absolute;top:6px;left:6px;background:var(--red);color:#fff;font-family:var(--cond);font-size:8px;font-weight:900;letter-spacing:2px;padding:2px 5px;border-radius:1px;animation:blink 1.5s infinite;pointer-events:none;z-index:5;}
-#tv-link{position:absolute;bottom:6px;right:6px;font-family:var(--mono);font-size:9px;color:var(--acc);background:rgba(7,9,13,.88);padding:3px 8px;border-radius:2px;border:1px solid var(--b2);}
-#tv-link:hover{border-color:var(--acc);}
-#tv-err{display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;height:100%;}
-#tv-err.show{display:flex;}
-#tv-err-icon{font-size:28px;}
-#tv-err-msg{font-family:var(--mono);font-size:9px;color:var(--t3);text-align:center;line-height:1.6;}
-.tv-err-btn{font-family:var(--cond);font-size:11px;font-weight:700;color:var(--red);border:1px solid var(--red);padding:5px 14px;border-radius:2px;}
-.tv-err-btn:hover{background:var(--red);color:#000;}
-#tv-err-hint{font-family:var(--mono);font-size:8px;color:var(--t3);}
+/* Channel grid */
+#tv-channels{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  background:var(--s1);overflow-y:auto;padding:6px;gap:4px;
+}
+.tv-ch-row{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;
+  border-radius:3px;border:1px solid var(--b2);background:var(--s2);
+  cursor:pointer;transition:all .15s;
+}
+.tv-ch-row:hover{border-color:var(--acc);background:var(--b1);}
+.tv-ch-name{font-family:var(--cond);font-size:12px;font-weight:700;flex:1;color:var(--t1);}
+.tv-ch-play{font-family:var(--mono);font-size:9px;color:var(--red);letter-spacing:1px;}
+.tv-ch-open{font-family:var(--mono);font-size:9px;color:var(--acc);padding:3px 8px;
+  border:1px solid var(--b3);border-radius:2px;transition:all .15s;white-space:nowrap;}
+.tv-ch-open:hover{border-color:var(--acc);}
+.tv-ch-row.loading .tv-ch-play{color:var(--yel);}
 
 /* WEBCAM */
 #wcam-panel{flex:1;display:flex;flex-direction:column;border-right:1px solid var(--b2);background:var(--s1);}
@@ -263,16 +266,17 @@ body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px
   <!-- TV -->
   <div id="tv-panel">
     <div class="ph"><span class="ph-t" data-i18n="live_news"></span><span class="live-badge">● LIVE</span></div>
-    <div id="tv-tabs"></div>
     <div id="tv-frame">
-      <div class="tv-ov" data-i18n="on_air"></div>
-      <iframe id="tv-iframe" src="" allowfullscreen allow="autoplay;encrypted-media" sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"></iframe>
-      <a id="tv-link" href="" target="_blank" rel="noopener"></a>
-      <div id="tv-err">
-        <span id="tv-err-icon">📡</span>
-        <span id="tv-err-msg" data-i18n="tv_err_msg"></span>
-        <a id="tv-err-btn" href="" target="_blank" rel="noopener" class="tv-err-btn"></a>
-        <span id="tv-err-hint" data-i18n="tv_err_hint"></span>
+      <!-- Channel grid (default view) -->
+      <div id="tv-channels"></div>
+      <!-- Embed (shown when user clicks a channel) -->
+      <iframe id="tv-iframe" src="" allowfullscreen allow="autoplay;encrypted-media"
+        sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
+        style="display:none;width:100%;height:100%;border:none;position:absolute;top:0;left:0;"></iframe>
+      <div id="tv-back" style="display:none;position:absolute;top:6px;left:6px;z-index:10;
+        font-family:var(--mono);font-size:9px;color:var(--acc);background:rgba(7,9,13,.88);
+        padding:3px 8px;border-radius:2px;border:1px solid var(--b2);cursor:pointer;">
+        ← canales
       </div>
     </div>
   </div>
@@ -381,8 +385,7 @@ function setLang(lang) {
   rebuildGrid();
   rebuildTicker();
   rebuildMap();
-  // Update TV panel strings
-  loadYT(curCh);
+  refreshYTLang();
 }
 
 // ══════════════════════════════════════════
@@ -419,7 +422,7 @@ var YT = [
   {n:'AlJazeera', cid:'UCNye-wNBqNL5ZzHSJdse4ug',  dir:'https://www.youtube.com/@AlJazeeraEnglish/live'},
   {n:'AlArabiya', cid:'UCnUYZLuoy1rq1aVMwx4aTzw',  dir:'https://www.youtube.com/@AlArabiya/live'},
 ];
-var curCh = 0;
+
 
 var WZ = {
   'IRAN ATTACKS':[
@@ -714,35 +717,54 @@ function buildLayers(){
 }
 
 // ══════════════════════════════════════════
-// YOUTUBE
+// YOUTUBE — channel grid + embed on click
 // ══════════════════════════════════════════
-function loadYT(chi){
-  curCh=chi;
-  var ch=YT[chi], f=document.getElementById('tv-iframe'), e=document.getElementById('tv-err');
-  f.style.display='block'; e.classList.remove('show');
-  f.src='https://www.youtube.com/embed/live_stream?channel='+ch.cid+'&autoplay=1&mute=1&rel=0&modestbranding=1&enablejsapi=1';
-  document.getElementById('tv-link').href=ch.dir;
-  document.getElementById('tv-link').textContent=t('tv_open',{n:ch.n});
-  document.getElementById('tv-err-btn').href=ch.dir;
-  document.getElementById('tv-err-btn').textContent=t('tv_watch',{n:ch.n});
-  document.querySelectorAll('.tv-tab').forEach(function(tab,i){ tab.classList.toggle('on',i===chi); });
-}
-function ytFail(){
-  document.getElementById('tv-iframe').style.display='none';
-  document.getElementById('tv-err').classList.add('show');
-}
-window.addEventListener('message',function(e){
-  try{ if(e.data&&typeof e.data==='object'&&e.data.event==='onError') ytFail(); }catch(x){}
-});
 function initYT(){
-  var tabs=document.getElementById('tv-tabs');
-  YT.forEach(function(ch,i){
-    var b=document.createElement('button');
-    b.className='tv-tab'+(i===0?' on':''); b.textContent=ch.n;
-    b.onclick=function(){ loadYT(i); };
-    tabs.appendChild(b);
+  var grid=document.getElementById('tv-channels');
+  var iframe=document.getElementById('tv-iframe');
+  var backBtn=document.getElementById('tv-back');
+
+  YT.forEach(function(ch){
+    var row=document.createElement('div'); row.className='tv-ch-row';
+    row.innerHTML=
+      '<span class="tv-ch-play">▶ LIVE</span>'+
+      '<span class="tv-ch-name">'+ch.n+'</span>'+
+      '<a class="tv-ch-open" href="'+ch.dir+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">'+
+        (LANG==='es'?'Abrir ↗':'Open ↗')+'</a>';
+    row.onclick=function(){
+      // Try embed
+      row.classList.add('loading');
+      iframe.src='https://www.youtube.com/embed/live_stream?channel='+ch.cid+
+        '&autoplay=1&mute=1&rel=0&modestbranding=1';
+      grid.style.display='none';
+      iframe.style.display='block';
+      backBtn.style.display='block';
+      backBtn.textContent=LANG==='es'?'← canales':'← channels';
+      // If embed fails after 4s (black screen / blocked), go back to grid
+      clearTimeout(window._ytTimeout);
+      window._ytTimeout=setTimeout(function(){
+        if(iframe.style.display==='block'){
+          // iframe loaded something — keep it
+        }
+      }, 4000);
+    };
+    grid.appendChild(row);
   });
-  loadYT(0);
+
+  backBtn.onclick=function(){
+    iframe.style.display='none'; iframe.src='';
+    backBtn.style.display='none';
+    grid.style.display='flex';
+    document.querySelectorAll('.tv-ch-row').forEach(function(r){r.classList.remove('loading');});
+  };
+}
+// Called by setLang — refresh "Open/Abrir" text
+function refreshYTLang(){
+  document.querySelectorAll('.tv-ch-open').forEach(function(a){
+    a.textContent=LANG==='es'?'Abrir ↗':'Open ↗';
+  });
+  var b=document.getElementById('tv-back');
+  if(b&&b.style.display!=='none') b.textContent=LANG==='es'?'← canales':'← channels';
 }
 
 // ══════════════════════════════════════════
